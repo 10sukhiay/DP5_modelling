@@ -14,11 +14,11 @@ Panel_Efficency.columns = DayIndex;
 System_Efficency = 0.85;
 
 ## Roof Inputs ##
-Previous_Solar = input('What is your current kW capacity of roofop solar? ');
+Previous_Solar = 0;
 
 if Previous_Solar == '0':
-    Roof_Height = int(input('Whats the height of your roof? '));
-    Roof_Length = int(input('Whats the Length of your roof? '));
+    Roof_Height = 4;
+    Roof_Length = 6;
 
     ## Roof Calcs ##
     Area_of_Roof = Roof_Height * Roof_Length;
@@ -33,7 +33,7 @@ else:
 
 
 ## Irradiance Data ##
-Location =  input('What is your closest city? Plymouth(0), Bristol(1), London(2), Birmingham(3) , Manchester(4), Newcastle(5), Glasgow(6), Inverness(7) ');
+Location = 1;
 if Location == '0' :
     Irr = pd.read_excel("Plymouth.xlsx");
 elif Location == '1' :
@@ -66,7 +66,7 @@ Irr_PanelAngle_0 = Irr_PanelAngle_0 * VariationEffects;
 Irr_PanelAngle_35 = Irr_PanelAngle_35 * VariationEffects;
 Irr_PanelAngle_50 = Irr_PanelAngle_50 * VariationEffects;   
 
-Roof_Pitch = input('do you have a flat(0), normal(1) or steep(2) pitched roof? ');
+Roof_Pitch = 1;
 if Roof_Pitch == '0':
     MonthIrr = Irr_PanelAngle_0;
 elif Roof_Pitch == '1':
@@ -96,7 +96,7 @@ Generation_Text =['Your yearly gerneration could be ', str(Year_Generation), 'kW
 print(Generation_Text)
 
 ## Traiff inputs ##
-Home_Use = input('How much energy do you use per year (kwh), if unknown just press enter: ');
+Home_Use = 3400;
 if Home_Use == '':
      Home_Use = 3400;
 
@@ -108,7 +108,7 @@ TariffOut= Tarifs.loc[0:11,:]/100;
 TariffIn= Tarifs.loc[12:24,:]/100;
 TariffIn.index = MonthIndex;
 
-Yealy_Wind_Resource = input('High (2), Average(1), Low(0) Yearly wind resource: ');
+Yealy_Wind_Resource = 1;
 if Yealy_Wind_Resource == '0':
     TariffOut = 1.1 * TariffOut;
     TariffIn = 1.1 * TariffIn;
@@ -129,14 +129,14 @@ PrePanelHome = PrePanelHome.sum();
 
 ## EV fuel Savings ##
 
-Car_Milage = input('What is your annual milage in Km, if unknown just press enter: ');
+Car_Milage = 12000;
 if Car_Milage == '':
     Car_Milage = 12000;
 else:
     Car_Milage = int(Car_Milage);
 
 
-Car_MPG = input('What is your cars miles / Gallon , if unknown just press enter: ');
+Car_MPG = 22.2;
 if Car_MPG == '':
      Car_KmperL = 22.2;
 else:  
@@ -144,7 +144,7 @@ else:
 
 Fuel_Cost = 1.2;
 
-EV_KmperKW = input('What is your EV Km / Kw , if unknown just press enter: ');
+EV_KmperKW = 0.19;
 if EV_KmperKW == '':
      EV_KwhperKm = 0.19;
 else:
