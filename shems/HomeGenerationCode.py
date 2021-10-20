@@ -34,21 +34,21 @@ else:
 
 ## Irradiance Data ##
 Location = 1;
-if Location == '0' :
+if Location == 0 :
     Irr = pd.read_excel("Plymouth.xlsx");
-elif Location == '1' :
+elif Location == 1 :
     Irr = pd.read_excel("Bristol.xlsx");
-elif Location == '2' :
+elif Location == 2 :
     Irr = pd.read_excel("London.xlsx");
-elif Location == '3' :
+elif Location == 3 :
     Irr = pd.read_excel("Birmingham.xlsx");
-elif Location == '4' :
+elif Location == 4 :
     Irr = pd.read_excel("Manchester.xlsx");
-elif Location == '5' :
+elif Location == 5 :
     Irr = pd.read_excel("Newcastle.xlsx");
-elif Location == '6' :
+elif Location == 6 :
     Irr = pd.read_excel("Glasgow.xlsx");
-elif Location == '7' :
+elif Location == 7 :
     Irr = pd.read_excel("Inverness.xlsx");
 
 VariationEffects = pd.DataFrame(np.random.randint(-10,10,size=(12, 24)))/100;
@@ -67,11 +67,11 @@ Irr_PanelAngle_35 = Irr_PanelAngle_35 * VariationEffects;
 Irr_PanelAngle_50 = Irr_PanelAngle_50 * VariationEffects;   
 
 Roof_Pitch = 1;
-if Roof_Pitch == '0':
+if Roof_Pitch == 0:
     MonthIrr = Irr_PanelAngle_0;
-elif Roof_Pitch == '1':
+elif Roof_Pitch == 1:
     MonthIrr = Irr_PanelAngle_35;
-elif Roof_Pitch == '2':
+elif Roof_Pitch == 2:
     MonthIrr = Irr_PanelAngle_50;
 else :
     MonthIrr = Irr_PanelAngle_35;
