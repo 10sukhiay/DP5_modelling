@@ -1,5 +1,12 @@
 import pandas as pd
 import numpy as np
+import os
+
+path = os.getcwd()
+path = path[:-5]
+inputspath = 'Inputs\HomeGen'
+path = path + inputspath
+
 
 ## Variables ##
 DayIndex = list(range(1, 25));
@@ -16,7 +23,7 @@ System_Efficency = 0.85;
 ## Roof Inputs ##
 Previous_Solar = 0;
 
-if Previous_Solar == '0':
+if Previous_Solar == 0:
     Roof_Height = 4;
     Roof_Length = 6;
 
@@ -37,7 +44,7 @@ Location = 1;
 if Location == 0 :
     Irr = pd.read_excel("Plymouth.xlsx");
 elif Location == 1 :
-    Irr = pd.read_excel("Bristol.xlsx");
+    Irr = pd.read_excel(path + "\Bristol.xlsx");
 elif Location == 2 :
     Irr = pd.read_excel("London.xlsx");
 elif Location == 3 :
@@ -50,6 +57,8 @@ elif Location == 6 :
     Irr = pd.read_excel("Glasgow.xlsx");
 elif Location == 7 :
     Irr = pd.read_excel("Inverness.xlsx");
+
+Irr = Irr.iloc[:, :-3]
 
 VariationEffects = pd.DataFrame(np.random.randint(-10,10,size=(12, 24)))/100;
 VariationEffects += 1;      
@@ -77,7 +86,7 @@ else :
     MonthIrr = Irr_PanelAngle_35;
 
 ## Temp ##
-Temperature = pd.read_excel("Temp.xlsx");
+Temperature = pd.read_excel(path + "\Temp.xlsx");
 VaryTemp = Temperature - 25;
 VaryTemp = VaryTemp * 0.00045;
 
@@ -103,7 +112,7 @@ if Home_Use == '':
 HomeUseFactor = int(Home_Use)/3400;
 
 ## Real Tarrif ## 
-Tarifs = pd.read_excel("Tarifs.xlsx")
+Tarifs = pd.read_excel(path + "\Tarifs.xlsx")
 TariffOut= Tarifs.loc[0:11,:]/100;
 TariffIn= Tarifs.loc[12:24,:]/100;
 TariffIn.index = MonthIndex;
@@ -119,7 +128,7 @@ elif Yealy_Wind_Resource == '2':
 
 AverageTarrifIn = (TariffIn.mean(axis = 0)).mean(axis = 0); 
 
-HouseUse = pd.read_excel("HouseUse.xlsx")
+HouseUse = pd.read_excel(path + "\HouseUse.xlsx")
 HomeUse =  HomeUseFactor * HouseUse;
 
 SolarGenLessHomeUse = Month_Total - HomeUse; 
@@ -144,11 +153,12 @@ else:
 
 Fuel_Cost = 1.2;
 
-EV_KmperKW = 0.19;
-if EV_KmperKW == '':
-     EV_KwhperKm = 0.19;
-else:
-    EV_KmperKW = int(EV_KmperKW);
+#EV_KmperKW = 0.19;
+EV_KwhperKm = 0.19
+#if EV_KmperKW == '':
+#     EV_KwhperKm = 0.19;
+#else:
+#    EV_KmperKW = int(EV_KmperKW);
 
 MonthTemp = Temperature.mean(axis = 0)
 EVTempLosses =((round(MonthTemp - 4))/100)+1;
@@ -163,7 +173,7 @@ WFHHours = 20;
 WFHCharging = Car_Milage/12 * EV_KwhperKm / WFHHours;
 
 SolarLessHomeEV = SolarGenLessHomeUse;
-print(SolarLessHomeEV);
+#print(SolarLessHomeEV);
 
 for i in range(1, 9):
     SolarLessHomeEV[i] -= WFHCharging;
@@ -174,7 +184,7 @@ for i in range(11, 16):
 for i in range(17, 24):
     SolarLessHomeEV[i] -= WFHCharging;
     
-print(SolarLessHomeEV);
+#print(SolarLessHomeEV);
 
 ## Traiff Calcs ##
 #TotalTarif = pd.DataFrame(np.ones((12, 24)))
