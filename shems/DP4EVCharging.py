@@ -18,8 +18,9 @@ zeros_charge_schedule['Charge_Rate'] = 0
 def v1g(charge_duration, charge_schedule, connections_available):
     while charge_schedule['Charge_Rate'].sum() < charge_duration:
         time_to_charge = connections_available['Price'].idxmin()
-        charge_schedule.__getitem__('Charge_Rate').__setitem__(time_to_charge, 1)
+        charge_schedule.loc[time_to_charge, 'Charge_Rate'] = 1
         connections_available.drop(time_to_charge, inplace=True)
+
 
     return charge_schedule, connections_available
 
