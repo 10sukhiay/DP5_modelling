@@ -17,13 +17,14 @@ def v1g(charge_duration, charge_schedule):
     return charge_schedule
 
 
-def calculate_SoC(charge_schedule, SoC_resolution):
-    cumsumSoC = charge_schedule['Charger_Instruction'].copy().cumsum() * SoC_resolution + charge_schedule.loc[charge_schedule.index.min(), 'SoC']
-    charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['SoC'])] = cumsumSoC[:-1]
+def calculate_soc(charge_schedule):
+    cumsum_soc = charge_schedule['Charger_Instruction'].copy().cumsum() * SoC_resolution +\
+                charge_schedule.loc[charge_schedule.index.min(), 'SoC']
+    charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['SoC'])] = cumsum_soc[:-1]
     return charge_schedule
 
 
-# def virtual_cost(charge_schedule, timeSoC_resolution)
+# def virtual_cost(charge_schedule, charger_efficiency, kWh_resolution, )
 
 
 # def v1g(charging_intervals, charge_schedule):
@@ -42,12 +43,14 @@ max_battery_cycles = 1500  # for TM3
 battery_capacity = 54  # kWh
 charger_efficiency = 1  # for charger
 plug_in_SoC = 0.1
+battery_cost_per_kWh = 137e2
 
 arrival_time = pd.to_datetime('2019-02-25 19:15:00')
 departure_time = pd.to_datetime('2019-02-26 1:00:00')
 time_resolution = pd.Timedelta('15 min')
-kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')
-SoC_resolution = kWh_resolution / battery_capacity
+# kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')
+cycle_cost_fraction = battery_cost_per_kWh * charge_rate * time_resolution / pd.Timedelta('60 min') / max_battery_cycles
+SoC_resolution = cycle_cost_fraction * max_battery_cycles / battery_capacity / battery_cost_per_kWh
 
 vrg_charge_duration = pd.Timedelta('105 min')
 v1g_charge_duration = pd.Timedelta('310 min')
@@ -70,7 +73,7 @@ vrg_charge_schedule = vrg(vrg_charge_duration,
 # v1g_charge_schedule = v1g(vrg_charge_schedule,
 #                           vrg_charge_schedule.copy())
 
-test = calculate_SoC(vrg_charge_schedule, SoC_resolution)
+test = calculate_soc(vrg_charge_schedule)
 
 print(test)
 # print(vrg_charge_schedule)
