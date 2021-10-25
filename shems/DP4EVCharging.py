@@ -35,11 +35,11 @@ def virtual_cost(charge_schedule, charger_type='V1G'):
                                (departure_time - arrival_time)
         charge_held_fraction = (departure_time - charge_schedule.index.to_series()) / \
                                (departure_time - arrival_time)
-        charge_schedule['Battery_Life_Factor'] = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
+        charge_schedule['Calendar_Ageing'] = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
         beta = 0
 
     charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + \
-                                      charge_schedule['Battery_Life_Factor'] + beta
+                                      charge_schedule['Calendar_Ageing'] + beta
 
     return charge_schedule
 
@@ -101,7 +101,7 @@ print(v1g_total_cost)
 plt.subplot(411)
 plt.plot(v1g_charge_schedule['Price'])
 plt.subplot(412)
-plt.plot(v1g_charge_schedule['Battery_Life_Factor'])
+plt.plot(v1g_charge_schedule['Calendar_Ageing'])
 plt.subplot(413)
 plt.plot(v1g_charge_schedule['Virtual_Cost'])
 plt.subplot(414)
