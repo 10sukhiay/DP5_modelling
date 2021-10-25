@@ -29,8 +29,10 @@ def calculate_soc(charge_schedule):
 
 def virtual_cost(charge_schedule, charger_type='V1G'):
     if charger_type == 'V1G':
-        charge_schedule['Soc_From_15'] = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
+        charge_schedule['Soc_From_15'] = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30 # to delete
         soc_from_15 = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
+        charge_schedule['charge_held_fraction'] = (departure_time - charge_schedule.index.to_series()) / \
+                               (departure_time - arrival_time)
         charge_held_fraction = (departure_time - charge_schedule.index.to_series()) / \
                                (departure_time - arrival_time)
         charge_schedule['Battery_Life_Factor'] = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
@@ -54,15 +56,15 @@ def virtual_cost(charge_schedule, charger_type='V1G'):
 # def update_SoC(charge_schedule, time_resolution, charge_rate, at_time):
 
 charge_rate = 7.4  # kW
-max_battery_cycles = 1500 * 1.625  # for TM3
+max_battery_cycles = 1500 * 1  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 battery_capacity = 54  # kWh
 charger_efficiency = 1  # for charger
-plug_in_SoC = 0.1
+plug_in_SoC = 0.15
 battery_cost_per_kWh = 137e2
 
-arrival_time = pd.to_datetime('2019-02-25 19:15:00')
-departure_time = pd.to_datetime('2019-02-26 19:00:00')
-time_resolution = pd.Timedelta('15 min')
+arrival_time = pd.to_datetime('2019-02-25 19:17:00')
+departure_time = pd.to_datetime('2019-02-26 7:12:00')
+time_resolution = pd.Timedelta('1 min')
 kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')
 cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution / max_battery_cycles
 SoC_resolution = cycle_cost_fraction * max_battery_cycles / battery_capacity / battery_cost_per_kWh
@@ -93,6 +95,8 @@ v1g_charge_schedule = v1g(vrg_charge_schedule)
 v1g_total_cost = (v1g_charge_schedule['Charger_Instruction'] * v1g_charge_schedule['Virtual_Cost']).sum()
 v1g_charge_schedule['Wholesale_Cost'] = v1g_charge_schedule['Price'] * kWh_resolution
 v1g_charge_schedule['Cost_Ratio'] = v1g_charge_schedule['Wholesale_Cost'] / v1g_charge_schedule['Virtual_Cost']
+
+print(v1g_total_cost)
 
 plt.subplot(411)
 plt.plot(v1g_charge_schedule['Price'])
