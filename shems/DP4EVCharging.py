@@ -20,8 +20,8 @@ def v1g(charge_schedule):
 def v2g(charge_schedule):
     charge_schedule['Checked'] = charge_schedule['Charge_In_Interval'].copy()
     v2g_total_cost = (charge_schedule['Charge_In_Interval'] * v1g_charge_schedule['Virtual_Cost']).sum()
+    calculate_soc(charge_schedule)
     while charge_schedule['Checked'].sum() < charge_schedule.shape[0] - 1:
-        calculate_soc(charge_schedule)
 
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
         discharge_time = working_charge_schedule['Price'].idxmax()
@@ -32,17 +32,19 @@ def v2g(charge_schedule):
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
 
         if working_charge_schedule['Virtual_Net'].min() < 0:
-            charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] = 1
-            charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
-            charge_schedule.loc[discharge_time, 'Charge_In_Interval'] = -1
+            add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 1)
             v2g_total_cost += working_charge_schedule['Virtual_Cost'].min()
             calculate_soc(charge_schedule)
-            # if charge_schedule['SoC']
-
-    # while working_charge_schedule['Virtual_Net'].min() < 0:
-
+            if charge_schedule['SoC'].min() < 0.15 or charge_schedule['SoC'].max() > 0.9:
+                add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 0)
 
     return charge_schedule, v2g_total_cost
+
+
+def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value):
+    charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] = value
+    charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = value
+    charge_schedule.loc[discharge_time, 'Charge_In_Interval'] = -value
 
 
 def calculate_soc(charge_schedule):
@@ -95,7 +97,7 @@ max_battery_cycles = 1500 * 1.625  # for TM3, factored to account for factory ra
 battery_capacity = 54  # kWh
 charger_efficiency = 1  # for charger
 plug_in_SoC = 0.15
-battery_cost_per_kWh = 137e2
+battery_cost_per_kWh = 0.001  # 137e2
 maker_taker_cost = 4
 
 arrival_time = pd.to_datetime('2019-02-25 19:17:00')
