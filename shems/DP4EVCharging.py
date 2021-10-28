@@ -22,7 +22,9 @@ def v2g(charge_schedule):
     v2g_total_cost = (charge_schedule['Charge_In_Interval'] * v1g_charge_schedule['Virtual_Cost']).sum()
     calculate_soc(charge_schedule)
     while charge_schedule['Checked'].sum() < charge_schedule.shape[0] - 1:
-
+        print(charge_schedule['Checked'].sum())
+        # if charge_schedule['Checked'].sum() >= 0.9 * (charge_schedule.shape[0] - 1):
+        #     print('Stop!')
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
         discharge_time = working_charge_schedule['Price'].idxmax()
         discharge_time_mask = charge_schedule.index.to_series().isin(working_charge_schedule.index.to_series().values)
@@ -55,35 +57,29 @@ def calculate_soc(charge_schedule):
 
 
 def virtual_cost(charge_schedule, charger_type='v1g'):
-    if charger_type == 'vrg':  # not used
-        soc_from_15 = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
+    soc_from_15 = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
+
+    if charger_type == 'v1g':
         charge_schedule['Discharge_Time'] = charge_schedule.index.max()
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
-                               (departure_time - arrival_time)
-        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
-        charge_schedule['Virtual_Revenue'] = 0
-    elif charger_type == 'v1g':
-        # charge_schedule['Soc_From_15'] = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30  # to delete
-        soc_from_15 = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
-        charge_schedule['Discharge_Time'] = charge_schedule.index.max()
-        # charge_schedule['charge_held_fraction'] = (departure_time - charge_schedule.index.to_series()) / \
-        #                                           (departure_time - arrival_time)
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
                                (departure_time - arrival_time)
         battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Revenue'] = 0
     elif charger_type == 'v2g':
-        soc_from_15 = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
                                (departure_time - arrival_time)
         battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
         # link_discharge_price = charge_schedule['Discharge_Time'] == charge_schedule.index.to_series()
         # test2 = charge_schedule[test1].copy()
         # test3 = test2.loc[test2.index.min(), 'Price']
-        test4 = charge_schedule.loc[charge_schedule['Discharge_Time'].copy(), 'Price'].values
-        test5 = test4 * kWh_resolution * charger_efficiency
-        charge_schedule['Virtual_Revenue'] = test5 - maker_taker_cost
+        test4 = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values
+        test5 = test4 * charger_efficiency
+        charge_schedule['Virtual_Revenue'] = (test5 - maker_taker_cost) * kWh_resolution
         # charge_schedule.loc[charge_schedule.index.max(), 'Virtual_Revenue'] = 0
+
+    # charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
+    #                        (departure_time - arrival_time)
+    # battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
 
     charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + \
                                       battery_ageing_cost
@@ -97,7 +93,7 @@ max_battery_cycles = 1500 * 1.625  # for TM3, factored to account for factory ra
 battery_capacity = 54  # kWh
 charger_efficiency = 1  # for charger
 plug_in_SoC = 0.15
-battery_cost_per_kWh = 0.001  # 137e2
+battery_cost_per_kWh = 137e2  # 137e2
 maker_taker_cost = 4
 
 arrival_time = pd.to_datetime('2019-02-25 19:17:00')
@@ -110,7 +106,7 @@ SoC_resolution = cycle_cost_fraction * max_battery_cycles / battery_capacity / b
 vrg_charge_duration = pd.Timedelta('40 min')
 v1g_charge_duration = pd.Timedelta('50 min')
 # vrg_charging_intervals = vrg_charge_duration / time_resolution
-v1g_charging_intervals = v1g_charge_duration / time_resolution
+# v1g_charging_intervals = v1g_charge_duration / time_resolution
 
 agile_extract = pd.read_excel(os.getcwd()[:-5] + 'Inputs\AgileExtract.xls', parse_dates=[0], index_col=0)
 connection_extract = agile_extract[arrival_time: departure_time].resample(time_resolution).pad()  # .iloc[:-1, :]
