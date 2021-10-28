@@ -1,6 +1,8 @@
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+import math
+import numpy as np
 
 
 def vrg(charge_schedule):
@@ -49,9 +51,11 @@ def v2g(charge_schedule):
     return charge_schedule, v2g_total_cost
 
 
-# def sumcum_cost(charge_schedule):
-
-
+def sumcum_cost(charge_schedule):
+    real_cost_indicator = (charge_schedule['Charge_In_Interval'] + charge_schedule['Checked']) / 2
+    real_revenue_indicator = charge_schedule['Charge_In_Interval'].abs() - real_cost_indicator
+    change_in_cost = real_cost_indicator.apply(np.floor) * charge_schedule['Virtual_Cost'] - real_revenue_indicator * charge_schedule['Virtual_Revenue']
+    charge_schedule['Running_Cost'] = (charge_schedule['Charge_In_Interval'].abs() * change_in_cost).cumsum()
     # charge_schedule.itterows()
     # # for row, column in charge_schedule:
     # #     x = row
@@ -126,8 +130,8 @@ vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedu
 v1g_charge_schedule = v1g(vrg_charge_schedule.copy())
 v2g_charge_schedule, v2g_total_cost = v2g(v1g_charge_schedule.copy())
 
-plt.plot(v2g_charge_schedule['SoC'])
-plt.show()
+# plt.plot(v2g_charge_schedule['SoC'])
+# plt.show()
 
 # test = calculate_soc(vrg_charge_schedule)
 
@@ -136,10 +140,10 @@ plt.show()
 v1g_total_cost = (v1g_charge_schedule['Charge_In_Interval'] * v1g_charge_schedule['Virtual_Cost']).sum()
 # v1g_charge_schedule['Wholesale_Cost'] = v1g_charge_schedule['Price'] * kWh_resolution
 # v1g_charge_schedule['Cost_Ratio'] = v1g_charge_schedule['Wholesale_Cost'] / v1g_charge_schedule['Virtual_Cost']
-v2g_total_cost_check = (
-        v2g_charge_schedule['Charge_In_Interval'] * v2g_charge_schedule['Price'] * kWh_resolution).sum()
+# v2g_total_cost_check = (
+#         v2g_charge_schedule['Charge_In_Interval'] * v2g_charge_schedule['Price'] * kWh_resolution).sum()
 
-# sumcum_cost(v2g_charge_schedule)
+sumcum_cost(v2g_charge_schedule)
 
 print(v1g_total_cost)
 print(v2g_total_cost)
