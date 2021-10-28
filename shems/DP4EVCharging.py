@@ -56,30 +56,19 @@ def calculate_soc(charge_schedule):
     return charge_schedule
 
 
-def virtual_cost(charge_schedule, charger_type='v1g'):
+def virtual_cost(charge_schedule, charger_type):
     soc_from_15 = calculate_soc(charge_schedule)['SoC'] / 3 + 0.30
 
     if charger_type == 'v1g':
         charge_schedule['Discharge_Time'] = charge_schedule.index.max()
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
-                               (departure_time - arrival_time)
-        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Revenue'] = 0
     elif charger_type == 'v2g':
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
-                               (departure_time - arrival_time)
-        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
-        # link_discharge_price = charge_schedule['Discharge_Time'] == charge_schedule.index.to_series()
-        # test2 = charge_schedule[test1].copy()
-        # test3 = test2.loc[test2.index.min(), 'Price']
-        test4 = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values
-        test5 = test4 * charger_efficiency
-        charge_schedule['Virtual_Revenue'] = (test5 - maker_taker_cost) * kWh_resolution
-        # charge_schedule.loc[charge_schedule.index.max(), 'Virtual_Revenue'] = 0
+        discharge_revenue = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values * charger_efficiency
+        charge_schedule['Virtual_Revenue'] = (discharge_revenue - maker_taker_cost) * kWh_resolution
 
-    # charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
-    #                        (departure_time - arrival_time)
-    # battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
+    charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
+                           (departure_time - arrival_time)
+    battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
 
     charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + \
                                       battery_ageing_cost
