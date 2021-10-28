@@ -8,6 +8,11 @@ def vrg(charge_schedule):
     return charge_schedule
 
 
+def vrg_max(charge_schedule):
+    charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration + v1g_charge_duration, 'Charge_In_Interval'] = 1
+    return charge_schedule
+
+
 def v1g(charge_schedule):
     while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration:
         calculate_soc(charge_schedule)
@@ -22,13 +27,14 @@ def v2g(charge_schedule):
     v2g_total_cost = (charge_schedule['Charge_In_Interval'] * v1g_charge_schedule['Virtual_Cost']).sum()
     calculate_soc(charge_schedule)
     while charge_schedule['Checked'].sum() < charge_schedule.shape[0] - 1:
-        print(charge_schedule['Checked'].sum())
-        # if charge_schedule['Checked'].sum() >= 0.9 * (charge_schedule.shape[0] - 1):
-        #     print('Stop!')
+        print(charge_schedule['Checked'].sum(), '/', charge_schedule.shape[0] - 1, ' connection intervals checked')
+
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
         discharge_time = working_charge_schedule['Price'].idxmax()
+
         discharge_time_mask = charge_schedule.index.to_series().isin(working_charge_schedule.index.to_series().values)
         charge_schedule.loc[discharge_time_mask, 'Discharge_Time'] = discharge_time
+
         virtual_cost(charge_schedule, 'v2g')
         charge_schedule.loc[discharge_time, 'Checked'] = 1
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
@@ -41,6 +47,17 @@ def v2g(charge_schedule):
                 add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 0)
 
     return charge_schedule, v2g_total_cost
+
+
+# def sumcum_cost(charge_schedule):
+
+
+    # charge_schedule.itterows()
+    # # for row, column in charge_schedule:
+    # #     x = row
+    # #     t = 'test'
+    # # charge_schedule['Virtual_Cost'] =
+    # # charge_schedule['sumcum_Cost'] =
 
 
 def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value):
@@ -68,10 +85,9 @@ def virtual_cost(charge_schedule, charger_type):
 
     charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
                            (departure_time - arrival_time)
-    battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction)
+    battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
 
-    charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + \
-                                      battery_ageing_cost
+    charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + battery_ageing_cost
     charge_schedule['Virtual_Net'] = charge_schedule['Virtual_Cost'] - charge_schedule['Virtual_Revenue']
 
     return charge_schedule
@@ -84,6 +100,7 @@ charger_efficiency = 1  # for charger
 plug_in_SoC = 0.15
 battery_cost_per_kWh = 137e2  # 137e2
 maker_taker_cost = 4
+lifetime_ageing_factor = 1
 
 arrival_time = pd.to_datetime('2019-02-25 19:17:00')
 departure_time = pd.to_datetime('2019-02-26 19:12:00')
@@ -94,26 +111,19 @@ SoC_resolution = cycle_cost_fraction * max_battery_cycles / battery_capacity / b
 
 vrg_charge_duration = pd.Timedelta('40 min')
 v1g_charge_duration = pd.Timedelta('50 min')
-# vrg_charging_intervals = vrg_charge_duration / time_resolution
-# v1g_charging_intervals = v1g_charge_duration / time_resolution
 
 agile_extract = pd.read_excel(os.getcwd()[:-5] + 'Inputs\AgileExtract.xls', parse_dates=[0], index_col=0)
 connection_extract = agile_extract[arrival_time: departure_time].resample(time_resolution).pad()  # .iloc[:-1, :]
-connection_extract.loc[connection_extract.index.max(), 'Price'] = maker_taker_cost / kWh_resolution / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
+connection_extract.loc[
+    connection_extract.index.max(), 'Price'] = maker_taker_cost / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
 
-
-# print(connection_extract[connection_extract.index.min() : departure_time - pd.Timedelta('40 min')].sum())
-
-# initial_connections_available = connection_extract.copy()
 zeros_charge_schedule = connection_extract
 zeros_charge_schedule['Charge_In_Interval'] = 0
 zeros_charge_schedule.loc[zeros_charge_schedule.index.min(), 'SoC'] = plug_in_SoC
 
 vrg_charge_schedule = vrg(zeros_charge_schedule)
-vrg_charge_schedule_max = vrg(zeros_charge_schedule.copy())
-
+vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy())), 'v1g')
 v1g_charge_schedule = v1g(vrg_charge_schedule.copy())
-
 v2g_charge_schedule, v2g_total_cost = v2g(v1g_charge_schedule.copy())
 
 plt.plot(v2g_charge_schedule['SoC'])
@@ -128,6 +138,8 @@ v1g_total_cost = (v1g_charge_schedule['Charge_In_Interval'] * v1g_charge_schedul
 # v1g_charge_schedule['Cost_Ratio'] = v1g_charge_schedule['Wholesale_Cost'] / v1g_charge_schedule['Virtual_Cost']
 v2g_total_cost_check = (
         v2g_charge_schedule['Charge_In_Interval'] * v2g_charge_schedule['Price'] * kWh_resolution).sum()
+
+# sumcum_cost(v2g_charge_schedule)
 
 print(v1g_total_cost)
 print(v2g_total_cost)
