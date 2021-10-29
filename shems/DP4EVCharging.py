@@ -11,7 +11,8 @@ def vrg(charge_schedule):
 
 
 def vrg_max(charge_schedule):
-    charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration + v1g_charge_duration, 'Charge_In_Interval'] = 1
+    charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration + v1g_charge_duration,
+    'Charge_In_Interval'] = 1
     return charge_schedule
 
 
@@ -37,17 +38,22 @@ def v2g(charge_schedule):
 
         discharge_time_mask = charge_schedule.index.to_series().isin(working_charge_schedule.index.to_series().values)
         charge_schedule.loc[discharge_time_mask, 'Discharge_Time'] = discharge_time
-
-        virtual_cost(charge_schedule, 'v2g')
         charge_schedule.loc[discharge_time, 'Checked'] = 1
+        virtual_cost(charge_schedule, 'v2g')
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
 
         if working_charge_schedule['Virtual_Net'].min() < 0:
             add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 1)
             # v2g_total_cost += working_charge_schedule['Virtual_Cost'].min()
             calculate_soc(charge_schedule)
-            if charge_schedule['SoC'].min() < 0.15 or charge_schedule['SoC'].max() > 0.9:
+            # x = charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min()
+            # calculate_soc(charge_schedule)
+            if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < 0.15 or \
+                    charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > 0.9:
                 add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 0)
+            # else:
+            #     charge_schedule.loc[discharge_time, 'Checked'] = 0
+            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
 
     return charge_schedule
 
@@ -55,7 +61,8 @@ def v2g(charge_schedule):
 def calculate_running_cost(charge_schedule):
     real_cost_indicator = (charge_schedule['Charge_In_Interval'] + 1) / 2
     real_revenue_indicator = charge_schedule['Charge_In_Interval'].abs() - real_cost_indicator
-    change_in_cost = real_cost_indicator.apply(np.floor) * charge_schedule['Virtual_Cost'] - real_revenue_indicator * charge_schedule['Virtual_Revenue']
+    change_in_cost = real_cost_indicator.apply(np.floor) * charge_schedule['Virtual_Cost'] - real_revenue_indicator * \
+                     charge_schedule['Virtual_Revenue']
     cumsum_cost = (charge_schedule['Charge_In_Interval'].abs() * change_in_cost).cumsum()
     charge_schedule['Running_Cost'] = 0
     charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['Running_Cost'])] = cumsum_cost[:-1]
@@ -95,33 +102,38 @@ def virtual_cost(charge_schedule, charger_type):
                            (departure_time - arrival_time)
     battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
 
-    charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + battery_ageing_cost
+    charge_schedule['Virtual_Cost'] = charge_schedule[
+                                          'Price'] * kWh_resolution / charger_efficiency + battery_ageing_cost
     charge_schedule['Virtual_Net'] = charge_schedule['Virtual_Cost'] - charge_schedule['Virtual_Revenue']
 
     return charge_schedule
 
 
 charge_rate = 7.4  # kW
-max_battery_cycles = 1500 * 1.625  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 battery_capacity = 54  # kWh
-charger_efficiency = 1  # for charger
-plug_in_SoC = 0.15
+charger_efficiency = 0.9  # 0.9 for charger
+plug_in_SoC = 0.055
 battery_cost_per_kWh = 137e2  # 137e2
-maker_taker_cost = 4
-lifetime_ageing_factor = 1
+maker_taker_cost = 4  # 4
+lifetime_ageing_factor = 0  # 1
+max_battery_cycles = 1500 * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
+price_volatility_factor = 1
 
-arrival_time = pd.to_datetime('2019-02-25 19:17:00')
-departure_time = pd.to_datetime('2019-02-26 19:12:00')
-time_resolution = pd.Timedelta('10 min')
+
+arrival_time = pd.to_datetime('2019-02-25 19:15:00')
+departure_time = pd.to_datetime('2019-02-27 5:00:00')
+time_resolution = pd.Timedelta('15 min')
 kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')
 cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution / max_battery_cycles
 SoC_resolution = cycle_cost_fraction * max_battery_cycles / battery_capacity / battery_cost_per_kWh
 
-vrg_charge_duration = pd.Timedelta('9 min')
-v1g_charge_duration = pd.Timedelta('50 min')
+vrg_charge_duration = pd.Timedelta('1.61 h')
+v1g_charge_duration = pd.Timedelta('2 h')
 
 agile_extract = pd.read_excel(os.getcwd()[:-5] + 'Inputs\AgileExtract.xls', parse_dates=[0], index_col=0)
 connection_extract = agile_extract[arrival_time: departure_time].resample(time_resolution).pad()  # .iloc[:-1, :]
+connection_extract_mean_price = connection_extract['Price'].mean()
+connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
 connection_extract.loc[
     connection_extract.index.max(), 'Price'] = maker_taker_cost / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
 
