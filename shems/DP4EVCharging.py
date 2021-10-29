@@ -51,9 +51,8 @@ def v2g(charge_schedule):
             if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < 0.15 or \
                     charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > 0.9:
                 add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 0)
-            # else:
-            #     charge_schedule.loc[discharge_time, 'Checked'] = 0
-            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
+                charge_schedule.loc[discharge_time, 'Checked'] = 0
+                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
 
     return charge_schedule
 
