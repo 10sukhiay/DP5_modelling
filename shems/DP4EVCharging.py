@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
-import math
 import numpy as np
 
 
@@ -31,7 +30,7 @@ def v2g(charge_schedule):
     # v2g_total_cost = (charge_schedule['Charge_In_Interval'] * v1g_charge_schedule['Virtual_Cost']).sum()
     calculate_soc(charge_schedule)
     while charge_schedule['Checked'].sum() < charge_schedule.shape[0] - 1:
-        print(charge_schedule['Checked'].sum(), '/', charge_schedule.shape[0] - 1, ' connection intervals checked')
+        # print(charge_schedule['Checked'].sum(), '/', charge_schedule.shape[0] - 1, ' connection intervals checked')
 
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
         discharge_time = working_charge_schedule['Price'].idxmax()
@@ -69,7 +68,7 @@ def calculate_running_cost(charge_schedule):
     # charge_schedule.itterows()
     # # for row, column in charge_schedule:
     # #     x = row
-    t = 'test'
+    # t = 'test'
     # # charge_schedule['Virtual_Cost'] =
     # # charge_schedule['sumcum_Cost'] =
 
@@ -117,6 +116,7 @@ maker_taker_cost = 4  # 4
 lifetime_ageing_factor = 1  # 1
 max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 price_volatility_factor = 1
+tarriff_data = 'Inputs\AgileExtract.xls'
 
 
 arrival_time = pd.to_datetime('2019-02-25 19:15:00')
@@ -129,7 +129,7 @@ SoC_resolution = cycle_cost_fraction * max_battery_cycles / battery_capacity / b
 vrg_charge_duration = pd.Timedelta('1.61 h')
 v1g_charge_duration = pd.Timedelta('2 h')
 
-agile_extract = pd.read_excel(os.getcwd()[:-5] + 'Inputs\AgileExtract.xls', parse_dates=[0], index_col=0)
+agile_extract = pd.read_excel(os.getcwd()[:-5] + tarriff_data, parse_dates=[0], index_col=0)
 connection_extract = agile_extract[arrival_time: departure_time].resample(time_resolution).pad()  # .iloc[:-1, :]
 connection_extract_mean_price = connection_extract['Price'].mean()
 connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
@@ -159,13 +159,13 @@ v1g_total_cost = (v1g_charge_schedule['Charge_In_Interval'] * v1g_charge_schedul
 #         v2g_charge_schedule['Charge_In_Interval'] * v2g_charge_schedule['Price'] * kWh_resolution).sum()
 
 calculate_running_cost(vrg_charge_schedule_max)
-calculate_running_cost(v2g_charge_schedule)
 calculate_running_cost(v1g_charge_schedule)
+calculate_running_cost(v2g_charge_schedule)
 
-# print(v1g_total_cost)
-# print(v2g_total_cost)
-# print(v2g_total_cost_check)
-#
+print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1])
+print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1])
+print('V2G virtual cost of connection period: ', v2g_charge_schedule['Running_Cost'].iloc[-1])
+
 plt.subplot(311)
 plt.plot(v2g_charge_schedule['Price'], label='Price')
 # plt.plot(v2g_charge_schedule['Virtual_Cost'], label='Virtual_Cost')
