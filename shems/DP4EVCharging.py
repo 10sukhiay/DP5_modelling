@@ -58,9 +58,9 @@ def v2g(charge_schedule):
 
 
 def calculate_running_cost(charge_schedule):
-    real_cost_indicator = (charge_schedule['Charge_In_Interval'] + 1) / 2
+    real_cost_indicator = ((charge_schedule['Charge_In_Interval'] + 1) / 2).apply(np.floor)
     real_revenue_indicator = charge_schedule['Charge_In_Interval'].abs() - real_cost_indicator
-    change_in_cost = real_cost_indicator.apply(np.floor) * charge_schedule['Virtual_Cost'] - real_revenue_indicator * \
+    change_in_cost = real_cost_indicator * charge_schedule['Virtual_Cost'] - real_revenue_indicator * \
                      charge_schedule['Virtual_Revenue']
     cumsum_cost = (charge_schedule['Charge_In_Interval'].abs() * change_in_cost).cumsum()
     charge_schedule['Running_Cost'] = 0
@@ -69,7 +69,7 @@ def calculate_running_cost(charge_schedule):
     # charge_schedule.itterows()
     # # for row, column in charge_schedule:
     # #     x = row
-    # #     t = 'test'
+    t = 'test'
     # # charge_schedule['Virtual_Cost'] =
     # # charge_schedule['sumcum_Cost'] =
 
@@ -114,13 +114,13 @@ charger_efficiency = 0.9  # 0.9 for charger
 plug_in_SoC = 0.055
 battery_cost_per_kWh = 137e2  # 137e2
 maker_taker_cost = 4  # 4
-lifetime_ageing_factor = 0  # 1
-max_battery_cycles = 1500 * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
+lifetime_ageing_factor = 1  # 1
+max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 price_volatility_factor = 1
 
 
 arrival_time = pd.to_datetime('2019-02-25 19:15:00')
-departure_time = pd.to_datetime('2019-02-27 5:00:00')
+departure_time = pd.to_datetime('2019-02-27 7:00:00')
 time_resolution = pd.Timedelta('15 min')
 kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')
 cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution / max_battery_cycles
@@ -158,6 +158,7 @@ v1g_total_cost = (v1g_charge_schedule['Charge_In_Interval'] * v1g_charge_schedul
 # v2g_total_cost_check = (
 #         v2g_charge_schedule['Charge_In_Interval'] * v2g_charge_schedule['Price'] * kWh_resolution).sum()
 
+calculate_running_cost(vrg_charge_schedule_max)
 calculate_running_cost(v2g_charge_schedule)
 calculate_running_cost(v1g_charge_schedule)
 
@@ -173,15 +174,20 @@ plt.grid()
 plt.legend()
 
 plt.subplot(312)
+plt.plot(vrg_charge_schedule_max['SoC'], label='vrg SoC')
 plt.plot(v1g_charge_schedule['SoC'], label='v1g SoC')
 plt.plot(v2g_charge_schedule['SoC'], label='v2g SoC')
 plt.grid()
 plt.legend()
 
 plt.subplot(313)
+plt.plot(vrg_charge_schedule_max['Running_Cost'], label='vrg Running_Cost')
 plt.plot(v1g_charge_schedule['Running_Cost'], label='v1g Running_Cost')
 plt.plot(v2g_charge_schedule['Running_Cost'], label='v2g Running_Cost')
 plt.grid()
 plt.legend()
+
+figManager = plt.get_current_fig_manager()
+figManager.window.state('zoomed')
 
 plt.show()
