@@ -102,8 +102,9 @@ def virtual_cost(charge_schedule, charger_type):
         - Charge rate battery ageing (cost of battery wear due to charge rate variance found to be minimal
         and therefore is omitted)
 
-    Factors TO BE ADDED:
-        - Home generation revenue (home generation used rather than sold saves the maker taker cost)
+    Factors TO BE ADDED: - Home generation revenue (home generation used rather than sold saves the maker taker cost)
+    - Home demand cost savings reduce the maker taker fee from V2G discharge by the ratio of the demand power vs the
+    controller charge rate. N.b. only a power shower could exceed the rating
     """
     kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')  # change in charge (kWh) after an interval of charging
     cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution / max_battery_cycles  # cost of battery wear due to charging and discharging
@@ -183,8 +184,8 @@ tariff_data = 'Inputs\AgileExtract.xls'
 arrival_time = pd.to_datetime('2019-02-25 19:15:00')
 departure_time = pd.to_datetime('2019-02-27 7:00:00')
 time_resolution = pd.Timedelta('15 min')
-vrg_charge_duration = pd.Timedelta('1.61 h')
-v1g_charge_duration = pd.Timedelta('2 h')
+vrg_charge_duration = pd.Timedelta('1.61 h')  # TO be provided by Yaz's algo to calculate energy from distance
+v1g_charge_duration = pd.Timedelta('2 h')  # TO be provided by Yaz's algo to calculate energy from distance
 
 """Main body of code"""
 zeros_charge_schedule = initialise_charge_schedule()
