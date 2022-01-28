@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import numpy as np
+import ApplianceDemand
 
 
 def vrg(charge_schedule):
@@ -117,7 +118,10 @@ def virtual_cost(charge_schedule, charger_type):
         charge_schedule['Virtual_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
     elif charger_type == 'v2g':
         discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values * charger_efficiency
-        charge_schedule['Virtual_Revenue'] = (discharge_price - maker_taker_cost) * kWh_resolution
+        home_usage_fraction = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()/charge_rate
+        adjusted_maker_taker = (1 - home_usage_fraction.values[1:])*maker_taker_cost
+        test = (discharge_price - adjusted_maker_taker.transpose()) * kWh_resolution
+        charge_schedule['Virtual_Revenue'] = test.transpose()
 
     charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / \
                            (departure_time - arrival_time)
@@ -130,21 +134,26 @@ def virtual_cost(charge_schedule, charger_type):
     return charge_schedule
 
 
-def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g):
+def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, app_demand_series_frac):
     """Plot DP4 equivalent figures"""
-    plt.subplot(311)
+    plt.subplot(411)
+    plt.plot(app_demand_series_frac, label='Appliance Demand')
+    plt.grid()
+    plt.legend()
+
+    plt.subplot(412)
     plt.plot(charge_schedule_vrg['Price'], label='Price')
     plt.grid()
     plt.legend()
 
-    plt.subplot(312)
+    plt.subplot(413)
     plt.plot(charge_schedule_vrg['SoC'], label='vrg SoC')
     plt.plot(charge_schedule_v1g['SoC'], label='v1g SoC')
     plt.plot(charge_schedule_v2g['SoC'], label='v2g SoC')
     plt.grid()
     plt.legend()
 
-    plt.subplot(313)
+    plt.subplot(414)
     plt.plot(charge_schedule_vrg['Running_Cost'], label='vrg Running_Cost')
     plt.plot(charge_schedule_v1g['Running_Cost'], label='v1g Running_Cost')
     plt.plot(charge_schedule_v2g['Running_Cost'], label='v2g Running_Cost')
@@ -187,6 +196,14 @@ time_resolution = pd.Timedelta('15 min')
 vrg_charge_duration = pd.Timedelta('1.61 h')  # TO be provided by Yaz's algo to calculate energy from distance
 v1g_charge_duration = pd.Timedelta('2 h')  # TO be provided by Yaz's algo to calculate energy from distance
 
+app_demand_series = ApplianceDemand.main(arrival_time, departure_time)
+app_demand_series_frac = app_demand_series.resample(time_resolution).mean()
+# app_demand_series_frac = app_demand_series_frac/charge_rate
+
+# plt.plot(app_demand_series)
+# plt.plot(app_demand_series_avg)
+# plt.show()
+
 """Main body of code"""
 zeros_charge_schedule = initialise_charge_schedule()
 vrg_charge_schedule = vrg(zeros_charge_schedule)
@@ -202,4 +219,4 @@ print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Runnin
 print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1])
 print('V2G virtual cost of connection period: ', v2g_charge_schedule['Running_Cost'].iloc[-1])
 
-plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule)
+plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, app_demand_series_frac)
