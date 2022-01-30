@@ -71,6 +71,9 @@ def v2g(charge_schedule):
 
     return charge_schedule
 
+def v2h(charge_schedule):
+    charge_schedule['Checked'] = charge_schedule['Charge_In_Interval'].copy().abs()
+
 
 def calculate_running_cost(charge_schedule):
     """Split charge indication column into boolean columns, to enable cumulative summation of charging cost and
