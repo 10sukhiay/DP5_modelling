@@ -104,14 +104,21 @@ def v2h(charge_schedule):
 def calculate_running_cost(charge_schedule):
     """Split charge indication column into boolean columns, to enable cumulative summation of charging cost and
     discharging revenue through the connection period separately."""
-    real_cost_indicator = ((charge_schedule['Charge_In_Interval'] + 1) / 2).apply(np.floor)
-    real_appliance_cost_indicator = ((charge_schedule['Charge_In_Interval'] + 1) / 2).apply(np.ceil)
-    real_revenue_indicator = charge_schedule['Charge_In_Interval'].abs() - real_cost_indicator
-    change_in_cost = real_cost_indicator * charge_schedule['Virtual_Cost'] - real_revenue_indicator * charge_schedule['Virtual_Revenue'] #+ real_appliance_cost_indicator * charge_schedule['Appliance_Cost']
+    # real_cost_indicator = ((charge_schedule['Charge_In_Interval'].apply(np.ceil) + 1) / 2).apply(np.floor) # maps charge interval values to charge indicator
+    # # real_appliance_cost_indicator = ((charge_schedule['Charge_In_Interval'] + 1) / 2).apply(np.ceil)
+    # real_appliance_cost_indicator = charge_schedule['Charge_In_Interval'].values < 1
+    # real_revenue_indicator = charge_schedule['Charge_In_Interval'].apply(np.floor).abs() - real_cost_indicator
+
+    kW_to_kWh = time_resolution / pd.Timedelta('60 min')
+    battery_discharge = charge_schedule['Charge_In_Interval'].values < 0
+    appliance_by_grid = charge_schedule['Charge_In_Interval'].values == 0
+    battery_charge = charge_schedule['Charge_In_Interval'].values > 0
+    test = appliance_by_grid * charge_schedule['Appliance_Power'] * kW_to_kWh
+    change_in_cost = battery_charge * charge_schedule['Virtual_Cost'] - battery_discharge * charge_schedule['Virtual_Revenue'] + appliance_by_grid * charge_schedule['Appliance_Power'] * kW_to_kWh
     cumsum_cost = change_in_cost.cumsum()  # cumulatively sum cost and revenue from each interval
+    test2 = test.cumsum()
     charge_schedule['Running_Cost'] = 0  # initialise column
-    charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['Running_Cost'])] = cumsum_cost[
-                                                                                      :-1]  # offset to calculate payment after charging occurred
+    charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['Running_Cost'])] = cumsum_cost[:-1]  # offset to calculate payment after charging occurred
 
 
 def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value):
@@ -208,6 +215,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.plot(charge_schedule_vrg['Running_Cost'], label='vrg Running_Cost')
     plt.plot(charge_schedule_v1g['Running_Cost'], label='v1g Running_Cost')
     plt.plot(charge_schedule_v2g['Running_Cost'], label='v2g Running_Cost')
+    plt.plot(charge_schedule_v2h['Running_Cost'], label='v2h Running_Cost')
     plt.grid()
     plt.legend()
 
@@ -273,6 +281,7 @@ v2h_charge_schedule = v2h(v2g_charge_schedule.copy())
 calculate_running_cost(vrg_charge_schedule_max)
 calculate_running_cost(v1g_charge_schedule)
 calculate_running_cost(v2g_charge_schedule)
+calculate_running_cost(v2h_charge_schedule)
 
 print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1])
 print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1])
