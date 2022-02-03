@@ -73,7 +73,7 @@ def v2h(charge_schedule):
         discharge_time_mask = charge_schedule.index.to_series().isin(working_charge_schedule.index.to_series().values)
         charge_schedule.loc[discharge_time_mask, 'Discharge_Time'] = discharge_time  # records the time at which the charge added during a charging interval will be discharged. Necessary to calculate the lifetime battery ageing cost
         charge_schedule.loc[discharge_time, 'Checked'] = 1  # most discharge intervals work before SoC check
-        virtual_cost(charge_schedule,'v2h')  # calculate virtual net profit for all available intervals charging to discharge in the discharge interval. V2G argument indicates to calculate discharge revenue
+        virtual_cost(charge_schedule, 'v2h')  # calculate virtual net profit for all available intervals charging to discharge in the discharge interval. V2G argument indicates to calculate discharge revenue
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]  # reduce charge schedule to intervals available
 
         if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
@@ -169,22 +169,42 @@ def virtual_cost(charge_schedule, charger_type):
             'Discharge_Time'] = charge_schedule.index.max()  # charge held for v1g until disconnection. IDEA: could add discharge gradient representative of journey
         charge_schedule[
             'Virtual_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
+
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
+                departure_time - arrival_time)
+        cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_power_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
+        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        charge_schedule['Virtual_Cost'] = charge_schedule[
+                                              'Price'] * kWh_resolution * discharge_power_frac / charger_efficiency + battery_ageing_cost
     elif charger_type == 'v2g':
         discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values * charger_efficiency
         discharge_home_frac = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Appliance_Power'].values / charge_rate
         adjusted_maker_taker = (1 - discharge_home_frac) * maker_taker_cost
         charge_schedule['Virtual_Revenue'] = ((discharge_price - adjusted_maker_taker.transpose()) * kWh_resolution).transpose()
         charge_schedule['Virtual_Revenue_old'] = ((discharge_price - maker_taker_cost) * kWh_resolution)
+
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
+                    departure_time - arrival_time)
+        cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_power_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
+        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution * discharge_power_frac / charger_efficiency + battery_ageing_cost
+
     elif charger_type == 'v2h':
         discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values * charger_efficiency
         discharge_power_frac = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Appliance_Power'].values / charge_rate
-        charge_schedule['Virtual_Revenue'] = (discharge_price * discharge_power_frac * kWh_resolution).transpose()
+        keep_revenue_mask = (charge_schedule['Charge_In_Interval'].values == -1) + (charge_schedule['Charge_In_Interval'].values == 1)
+        update_revenue_mask = ~keep_revenue_mask
+        charge_schedule['Virtual_Revenue'] = (discharge_price * discharge_power_frac * kWh_resolution).transpose() * update_revenue_mask + charge_schedule['Virtual_Revenue'] * keep_revenue_mask
 
-    charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
-    cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_power_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
-    battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
+                    departure_time - arrival_time)
+        cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_power_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
+        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        charge_schedule['Virtual_Cost'] = update_revenue_mask * (charge_schedule[
+                                                                     'Price'] * kWh_resolution * discharge_power_frac / charger_efficiency + battery_ageing_cost) + \
+                                          charge_schedule['Virtual_Cost'] * keep_revenue_mask
 
-    charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution * discharge_power_frac / charger_efficiency + battery_ageing_cost
+
     charge_schedule['Virtual_Net'] = charge_schedule['Virtual_Cost'] - charge_schedule['Virtual_Revenue']
 
     return charge_schedule
