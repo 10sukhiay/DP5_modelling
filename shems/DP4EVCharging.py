@@ -53,8 +53,8 @@ def v2g(charge_schedule):
         if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
             add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 1)  # update schedule to charge and discharge at intervals
             calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
-            if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < 0.15 or \
-                    charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > 0.9:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
+            if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < battery_v2g_floor or \
+                    charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
                 add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, -1)  # update schedule to NOT charge and discharge at intervals
                 charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
                 charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
@@ -89,8 +89,8 @@ def v2h(charge_schedule):
                 charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
 
             calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
-            if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < 0.15 or \
-                    charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > 0.9:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
+            if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < battery_v2g_floor or \
+                    charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
                 charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
                 charge_schedule.loc[discharge_time, 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
                 charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
@@ -270,6 +270,8 @@ battery_capacity = 54  # kWh
 charger_efficiency = 0.9  # 0.9 for charger
 plug_in_SoC = 0.2
 battery_cost_per_kWh = 137e2  # 137e2
+battery_v2g_floor = 0.15
+battery_v2g_ceil = 0.9
 maker_taker_cost = 4  # 4
 lifetime_ageing_factor = 1  # 1
 max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for
