@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 Solar_Panel_Area = 1.4;
 Space_From_Edge = 0.5;
@@ -18,12 +19,12 @@ time_resolution = pd.Timedelta('20 min')
 hour_resolution = pd.Timedelta('60 min')
 hour_ratio = hour_resolution / time_resolution
 
-IrradianceData = pd.read_excel('Bristoldata.xlsx', parse_dates=[0], index_col=0)
+IrradianceData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Bristol.xls', parse_dates=[0], index_col=0)
 MaskedIrradiance = IrradianceData[arrival_time: departure_time].resample(time_resolution).interpolate().iloc[:-1, :]
 
 ## Temp ##
 
-Temperature = pd.read_excel("TempData.xlsx", parse_dates=[0], index_col=0);
+Temperature = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp.xls', parse_dates=[0], index_col=0);
 Temperature = Temperature.iloc[:,:-1]
 MaskedTemp = Temperature[arrival_time: departure_time].resample(time_resolution).pad().iloc[:-1, :]
 VaryTemp = (MaskedTemp - 25)* 0.00045;
@@ -37,8 +38,8 @@ Time_Generation = Month_Area * System_Efficency * TempCoeff.values/1000
 Time_Total = Time_Generation.sum() / hour_ratio
 
 
-Generation_Text ='Your gerneration over this period could be ', int(Time_Total), 'kWhs';
-print(Generation_Text)
+# Generation_Text ='Your gerneration over this period could be ', int(Time_Total), 'kWhs';
+# print(Generation_Text)
 
 plt.plot(Time_Generation['Irrad'])
 plt.show()
