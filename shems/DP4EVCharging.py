@@ -115,6 +115,7 @@ def calculate_running_cost(charge_schedule):
     battery_charge = charge_schedule['Charge_In_Interval'].values > 0
     test = appliance_by_grid * charge_schedule['Appliance_Power'] * kW_to_kWh
     change_in_cost = battery_charge * charge_schedule['Virtual_Cost'] - battery_discharge * charge_schedule['Virtual_Revenue'] + appliance_by_grid * charge_schedule['Appliance_Power'] * kW_to_kWh
+    # change_in_cost = appliance_by_grid * charge_schedule['Appliance_Power'] * kW_to_kWh
     cumsum_cost = change_in_cost.cumsum()  # cumulatively sum cost and revenue from each interval
     test2 = test.cumsum()
     charge_schedule['Running_Cost'] = 0  # initialise column
