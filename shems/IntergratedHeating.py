@@ -95,7 +95,7 @@ def main(arrival_time, departure_time, time_resolution):
 
         Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
         Floor_Loss = FloorU * (Wall_Length * 2) * Outside_Temp_Change
-        Roof_Loss = RoofU * (Wall_Length * 2) * Outside_Temp_Change
+            Roof_Loss = RoofU * (Wall_Length * 2) * Outside_Temp_Change
         Window_Loss = WindowU * (Window_Area * No_Windows) * Outside_Temp_Change
         Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
         Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
