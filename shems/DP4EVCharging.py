@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import ApplianceDemand
 import HomeGenerationCode as HomeGen
+import IntergratedHeating as Heat
 
 
 def vrg(charge_schedule, mode):
@@ -257,7 +258,8 @@ def initialise_charge_schedule(appliance_forecast=True):
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()  # [1:]
         connection_extract['Solar_Power'] = HomeGen.main(arrival_time, departure_time, time_resolution)  # .resample(time_resolution).mean()[1:]
-        connection_extract['Home_Power'] = connection_extract['Appliance_Power'] - connection_extract['Solar_Power']
+        connection_extract['Heating_Power'] = Heat.main(arrival_time, departure_time, time_resolution)  
+        connection_extract['Home_Power'] = connection_extract['Appliance_Power'] - connection_extract['Solar_Power'] + connection_extract['Heating_Power']
     else:
         connection_extract['Appliance_Power'] = connection_extract['Price'] * 0  # BODGE
         connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
@@ -278,7 +280,7 @@ lifetime_ageing_factor = 1  # 1
 max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 price_volatility_factor = 1  # 1
 tariff_data = 'Inputs\AgileExtract.xls'
-arrival_time = pd.to_datetime('2019-02-25 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+arrival_time = pd.to_datetime('2019-02-24 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
 departure_time = pd.to_datetime('2019-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 time_resolution = pd.Timedelta('15 min')
 vrg_charge_duration = pd.Timedelta('1.6 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance

@@ -38,7 +38,7 @@ def main(arrival_time, departure_time, time_resolution):
 
     TempCoeff = Panel_Efficency - VaryTemp
     Month_Area = MaskedIrradiance * Panel_Area
-    Time_Generation = Month_Area * System_Efficency * TempCoeff.values/1000
+    Time_Generation = Month_Area * System_Efficency * TempCoeff.values / 1000
     Time_Total = Time_Generation.sum() / hour_ratio
 
     return Time_Generation
