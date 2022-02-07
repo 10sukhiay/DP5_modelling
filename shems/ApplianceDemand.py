@@ -11,7 +11,7 @@ def main(arrival_time, departure_time):
     app_demand = pd.read_excel(os.getcwd()[:-5] + app_data)
     time_resolution = pd.Timedelta(app_demand['Duration (h)'].min(), 'h')
     # app_demand_series = pd.date_range(arrival_time, departure_time, freq=time_resolution)
-    date_time_index = pd.date_range(arrival_time, departure_time, freq=time_resolution)
+    date_time_index = pd.date_range(arrival_time, departure_time + time_resolution, freq=time_resolution)
     app_demand_series = pd.DataFrame(0, index=date_time_index, columns=['Power'])
     dates = list(set(date_time_index.date))
 

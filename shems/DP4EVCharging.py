@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import ApplianceDemand
 import HomeGenerationCode as HomeGen
-import IntergratedHeating as ElectircHeating
+import IntergratedHeating as Heat
 
 
 def vrg(charge_schedule, mode):
@@ -45,7 +45,7 @@ def v2g(charge_schedule, mode):
         """Check all intervals for v2g suitability. TO DO: maybe stop after virtual net > 0"""
         # print(charge_schedule['Checked'].sum(), '/', charge_schedule.shape[0] - 1, ' connection intervals checked')
 
-        if mode == 'EV':  # BODGE
+        if mode == 'EV':  # BODGE, reminder that this does break
             working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
         else:
             working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
@@ -114,11 +114,11 @@ def calculate_running_cost(charge_schedule):
     kW_to_kWh = time_resolution / pd.Timedelta('60 min')
     battery_discharge = charge_schedule['Charge_In_Interval'].values < 0
     battery_charge = charge_schedule['Charge_In_Interval'].values > 0
-    appliance_by_grid = (charge_schedule['Charge_In_Interval'].values == 0) + battery_charge
+    home_by_grid = (charge_schedule['Charge_In_Interval'].values == 0) + battery_charge
 
-    test = appliance_by_grid * charge_schedule['Home_Power'] * kW_to_kWh
-    change_in_cost = battery_charge * charge_schedule['Virtual_Cost'] - battery_discharge * charge_schedule['Virtual_Revenue'] + appliance_by_grid * charge_schedule['Home_Power'] * kW_to_kWh
-    # change_in_cost = appliance_by_grid * charge_schedule['Home_Power'] * kW_to_kWh
+    test = home_by_grid * charge_schedule['Home_Power'] * kW_to_kWh
+    change_in_cost = battery_charge * charge_schedule['Virtual_Cost'] - battery_discharge * charge_schedule['Virtual_Revenue'] + home_by_grid * charge_schedule['Home_Power'] * kW_to_kWh
+    # change_in_cost = home_by_grid * charge_schedule['Home_Power'] * kW_to_kWh * charge_schedule['Price']
     cumsum_cost = change_in_cost.cumsum()  # cumulatively sum cost and revenue from each interval
     test2 = test.cumsum()
     charge_schedule['Running_Cost'] = 0  # initialise column
@@ -189,7 +189,8 @@ def virtual_cost(charge_schedule, charger_type):
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
         cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_power_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
-        charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution * discharge_power_frac / charger_efficiency + battery_ageing_cost
+        # charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution * discharge_power_frac / charger_efficiency + battery_ageing_cost
+        charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * kWh_resolution / charger_efficiency + battery_ageing_cost
 
     elif charger_type == 'v2h':
         discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Price'].values * charger_efficiency
@@ -246,7 +247,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.show()
 
 
-def initialise_charge_schedule(appliance_forecast=True):
+def initialise_charge_schedule(appliance_forecast=True, gas=False):
     agile_extract = pd.read_excel(os.getcwd()[:-5] + tariff_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
@@ -258,13 +259,19 @@ def initialise_charge_schedule(appliance_forecast=True):
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()  # [1:]
         connection_extract['Solar_Power'] = HomeGen.main(arrival_time, departure_time, time_resolution)  # .resample(time_resolution).mean()[1:]
-        connection_extract['Heating_Power'] = ElectircHeating.main(arrival_time, departure_time, time_resolution)  
-        connection_extract['Home_Power'] = connection_extract['Appliance_Power'] - connection_extract['Solar_Power'] + connection_extract['Heating_Power']
+        connection_extract['Heating_Power'] = Heat.main(arrival_time, departure_time, time_resolution)
+        if gas:
+            connection_extract['Home_Power'] = connection_extract['Appliance_Power'] - connection_extract['Solar_Power']
+            gas_cost = connection_extract['Heating_Power'] / gas_efficiency * time_resolution / pd.Timedelta('60 min') * gas_price
+            total_gas_cost = gas_cost.cumsum()[-1]
+        else:
+            connection_extract['Home_Power'] = connection_extract['Appliance_Power'] - connection_extract['Solar_Power'] + connection_extract['Heating_Power']
+            total_gas_cost = 0
     else:
         connection_extract['Appliance_Power'] = connection_extract['Price'] * 0  # BODGE
         connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
 
-    return connection_extract
+    return connection_extract, total_gas_cost
 
 
 """Inputs from researched data. IDEA: make readable as .txt batch files"""
@@ -280,12 +287,14 @@ lifetime_ageing_factor = 1  # 1
 max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 price_volatility_factor = 1  # 1
 tariff_data = 'Inputs\AgileExtract.xls'
-arrival_time = pd.to_datetime('2019-02-24 00:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-departure_time = pd.to_datetime('2019-02-25 00:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+arrival_time = pd.to_datetime('2019-02-25 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+departure_time = pd.to_datetime('2019-02-27 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 time_resolution = pd.Timedelta('15 min')
 vrg_charge_duration = pd.Timedelta('1.6 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance
 v1g_charge_duration = pd.Timedelta('2 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
 battery_mode = 'Home'  # EV or Home
+gas_price = 9  # 3.8
+gas_efficiency = 0.8
 
 app_demand_series = ApplianceDemand.main(arrival_time, departure_time)
 app_demand_series_frac = app_demand_series.resample(time_resolution).mean()
@@ -296,12 +305,13 @@ app_demand_series_frac = app_demand_series.resample(time_resolution).mean()
 # plt.show()
 
 """Main body of code"""
-zeros_charge_schedule = initialise_charge_schedule()
+zeros_charge_schedule, gas_cost = initialise_charge_schedule()
 vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
 vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
 v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode)
 v2g_charge_schedule = v2g(v1g_charge_schedule.copy(), battery_mode)
-v2h_charge_schedule = v2h(v2g_charge_schedule.copy())
+# v2h_charge_schedule = v2h(v2g_charge_schedule.copy())
+v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
 
 calculate_running_cost(vrg_charge_schedule_max)
 calculate_running_cost(v1g_charge_schedule)
