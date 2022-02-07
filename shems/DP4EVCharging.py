@@ -259,7 +259,8 @@ def initialise_charge_schedule(appliance_forecast=True, gas=False):
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()  # [1:]
         connection_extract['Solar_Power'] = HomeGen.main(arrival_time, departure_time, time_resolution)  # .resample(time_resolution).mean()[1:]
-        connection_extract['Heating_Power'] = Heat.main(arrival_time, departure_time, time_resolution)
+        connection_extract['Heating_Power'] = Heat.mainElec(arrival_time, departure_time, time_resolution)
+        connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(arrival_time, departure_time, time_resolution)
         if gas:
             connection_extract['Home_Power'] = connection_extract['Appliance_Power'] - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * time_resolution / pd.Timedelta('60 min') * gas_price
