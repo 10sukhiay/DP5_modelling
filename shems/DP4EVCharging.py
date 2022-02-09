@@ -71,8 +71,8 @@ def v2h(charge_schedule):
 
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
         discharge_time = working_charge_schedule['Home_Power'].idxmax()
-        if discharge_time == pd.to_datetime('2019-07-25 09:00:00'):
-            print('stop')
+        # if discharge_time == pd.to_datetime('2019-07-25 09:00:00'):
+        #     print('stop')
         charge_schedule, working_charge_schedule = discharge_mask(charge_schedule, working_charge_schedule, discharge_time, 'v2h')
 
         if working_charge_schedule['Virtual_Net'].min() < 0:  # and working_charge_schedule['Virtual_Net'].min() < charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Virtual_Cost']
@@ -100,8 +100,8 @@ def v2h(charge_schedule):
                 charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
                 charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
 
-        if charge_schedule.loc[pd.to_datetime('2019-07-25 09:00:00'), 'Charge_In_Interval'] != 0:
-            test = charge_schedule['Charge_In_Interval'].cumsum()
+        # if charge_schedule.loc[pd.to_datetime('2019-07-25 09:00:00'), 'Charge_In_Interval'] != 0:
+        #     test = charge_schedule['Charge_In_Interval'].cumsum()
 
     return charge_schedule
 
@@ -265,16 +265,16 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.subplot(412)
     plt.plot(charge_schedule_vrg['Price'], label='Price')
     plt.plot(charge_schedule_v2g['Adjusted_Price'], label='Adjusted Price')
-    plt.plot(charge_schedule_v2g['Virtual_Cost'], label='v2h cost')
-    plt.plot(charge_schedule_v2g['Virtual_Revenue'], label='v2h rev')
-    plt.plot(charge_schedule_v2g['Virtual_Net'], label='v2h net')
+    # plt.plot(charge_schedule_v2g['Virtual_Cost'], label='v2h cost')
+    # plt.plot(charge_schedule_v2g['Virtual_Revenue'], label='v2h rev')
+    # plt.plot(charge_schedule_v2g['Virtual_Net'], label='v2h net')
     # plt.plot(charge_schedule_v2g['Virtual_Cost'], label='v2g cost')
     plt.grid()
     plt.legend()
 
     plt.subplot(413)
-    # plt.plot(charge_schedule_vrg['SoC'], label='vrg SoC')
-    # plt.plot(charge_schedule_v1g['SoC'], label='v1g SoC')
+    plt.plot(charge_schedule_vrg['SoC'], label='vrg SoC')
+    plt.plot(charge_schedule_v1g['SoC'], label='v1g SoC')
     plt.plot(charge_schedule_v2g['SoC'], label='v2g SoC')
     plt.plot(charge_schedule_v2h['SoC'], label='v2h SoC')
     plt.grid()
@@ -294,7 +294,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.show()
 
 
-def initialise_charge_schedule(appliance_forecast=False, gas=False):
+def initialise_charge_schedule(appliance_forecast=True, gas=False):
     agile_extract = pd.read_excel(os.getcwd()[:-5] + tariff_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
@@ -337,7 +337,7 @@ def initialise_charge_schedule(appliance_forecast=False, gas=False):
 charge_rate = 7.4  # kW
 battery_capacity = 54  # kWh
 charger_efficiency = 0.9  # 0.9 for charger
-plug_in_SoC = 0.2
+plug_in_SoC = 0.8
 battery_cost_per_kWh = 137e2  # 137e2
 battery_v2g_floor = 0.15
 battery_v2g_ceil = 0.9
@@ -346,12 +346,12 @@ lifetime_ageing_factor = 1  # 1
 max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 price_volatility_factor = 1  # 1
 tariff_data = 'Inputs\AgileExtract.xls'
-arrival_time = pd.to_datetime('2019-07-23 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-departure_time = pd.to_datetime('2019-07-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+arrival_time = pd.to_datetime('2019-02-21 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+departure_time = pd.to_datetime('2019-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 time_resolution = pd.Timedelta('15 min')
-vrg_charge_duration = pd.Timedelta('1 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance
-v1g_charge_duration = pd.Timedelta('1 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
-battery_mode = 'Home'  # EV or Home
+vrg_charge_duration = pd.Timedelta('0 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
+v1g_charge_duration = pd.Timedelta('-1 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
+battery_mode = 'EV'  # EV or Home
 gas_price = 9  # 3.8
 gas_efficiency = 0.8
 

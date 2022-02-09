@@ -90,17 +90,6 @@ def mainElec(arrival_time, departure_time, time_resolution):
         else:
             Heating = Energy_Loss
 
-
-<<<<<<< HEAD
-            Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
-            Floor_Loss = FloorU * (Wall_Length * 2) * Outside_Temp_Change
-            Roof_Loss = RoofU * (Wall_Length * 2) * Outside_Temp_Change
-            Window_Loss = WindowU * (Window_Area * No_Windows) * Outside_Temp_Change
-            Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
-            Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
-
-=======
->>>>>>> main
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
 
@@ -110,10 +99,6 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Window_Loss = WindowU * (Window_Area * No_Windows) * Outside_Temp_Change
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
-<<<<<<< HEAD
-
-=======
->>>>>>> main
 
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
@@ -243,4 +228,9 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Power_df.index = MaskedOutsideTemp.index
     return Power_df
 
-a = mainElec('2019-02-25 19:00:00','2019-02-26 07:00:00','15 min')
+# a = mainElec('2019-02-25 19:00:00','2019-02-26 07:00:00','15 min')
+
+# BUGGED - ask Adam
+
+# arrival_time = pd.to_datetime('2019-07-20 19:00:00')
+# departure_time = pd.to_datetime('2019-07-26 07:00:00')
