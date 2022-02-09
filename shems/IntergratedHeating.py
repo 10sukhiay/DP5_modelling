@@ -91,6 +91,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Heating = Energy_Loss
 
 
+<<<<<<< HEAD
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
             Floor_Loss = FloorU * (Wall_Length * 2) * Outside_Temp_Change
             Roof_Loss = RoofU * (Wall_Length * 2) * Outside_Temp_Change
@@ -98,6 +99,8 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
 
+=======
+>>>>>>> main
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
 
@@ -107,7 +110,10 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Window_Loss = WindowU * (Window_Area * No_Windows) * Outside_Temp_Change
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res

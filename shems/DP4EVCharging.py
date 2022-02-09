@@ -17,7 +17,7 @@ def vrg(charge_schedule, mode):
 def vrg_max(charge_schedule, mode):
     """Populates charge schedule such that the vrg and v1g charging is done all upon connection"""
     if mode == 'EV':
-        charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration + v1g_charge_duration,'Charge_In_Interval'] = 1
+        charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration + v1g_charge_duration, 'Charge_In_Interval'] = 1
     return charge_schedule
 
 
@@ -168,10 +168,8 @@ def virtual_cost(charge_schedule, charger_type):
     # charge_schedule['Appliance_Cost'] = charge_schedule['Appliance_Cost'] * charge_schedule['Price']
 
     if charger_type == 'v1g':
-        charge_schedule[
-            'Discharge_Time'] = charge_schedule.index.max()  # charge held for v1g until disconnection. IDEA: could add discharge gradient representative of journey
-        charge_schedule[
-            'Virtual_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
+        charge_schedule['Discharge_Time'] = charge_schedule.index.max()  # charge held for v1g until disconnection. IDEA: could add discharge gradient representative of journey
+        charge_schedule['Virtual_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
 
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
                 departure_time - arrival_time)
@@ -288,12 +286,12 @@ lifetime_ageing_factor = 1  # 1
 max_battery_cycles = 1500 * 1.625  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
 price_volatility_factor = 1  # 1
 tariff_data = 'Inputs\AgileExtract.xls'
-arrival_time = pd.to_datetime('2019-02-25 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-departure_time = pd.to_datetime('2019-02-27 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+arrival_time = pd.to_datetime('2019-07-23 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+departure_time = pd.to_datetime('2019-07-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 time_resolution = pd.Timedelta('15 min')
-vrg_charge_duration = pd.Timedelta('1.6 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance
-v1g_charge_duration = pd.Timedelta('2 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
-battery_mode = 'Home'  # EV or Home
+vrg_charge_duration = pd.Timedelta('1 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance
+v1g_charge_duration = pd.Timedelta('1 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
+battery_mode = 'EV'  # EV or Home
 gas_price = 9  # 3.8
 gas_efficiency = 0.8
 
