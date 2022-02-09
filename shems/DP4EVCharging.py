@@ -34,63 +34,70 @@ def v1g(charge_schedule, mode):
     return charge_schedule
 
 
-def v2g(charge_schedule, mode):
+def v2(charge_schedule, mode):
     """Populates charge schedule with charge and discharge commands, at intervals which result in a net profit. Works
     by selecting the maximum price interval for discharging, calculating the virtual net profit for charging (to
     enable discharging) in all other intervals, and adding charge/discharge interval pairs if profitable. Also
     ensures SoC limits are not exceeded (reserve charge TO DO, maximum SoC)."""
 
-    charge_schedule['Checked'] = charge_schedule['Charge_In_Interval'].copy()  # initialise checked column from v1g
+    charge_schedule['Checked'] = charge_schedule['Charge_In_Interval'].copy().abs()  # initialise checked column from v1g
+
     while charge_schedule['Checked'].sum() < charge_schedule.shape[0] - 1:
         """Check all intervals for v2g suitability. TO DO: maybe stop after virtual net > 0"""
         # print(charge_schedule['Checked'].sum(), '/', charge_schedule.shape[0] - 1, ' connection intervals checked')
 
-        if mode == 'EV':  # BODGE, reminder that this does break
-            working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
-        else:
-            working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
-        discharge_time = working_charge_schedule['Price'].idxmax()  # virtual revenue directly proportional to interval price
+        working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
 
-        discharge_mask(charge_schedule, working_charge_schedule, discharge_time, 'v2g')
+        if mode == 'g':
+            discharge_mask_mode = 'v2g'
+            discharge_time = working_charge_schedule['Price'].idxmax()  # virtual revenue directly proportional to interval price
+            test = 1
+        elif mode == 'h':
+            discharge_mask_mode = 'v2h'
+            discharge_time = working_charge_schedule['Home_Power'].idxmax()
+            test = charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+
+        charge_schedule, working_charge_schedule = discharge_mask(charge_schedule, working_charge_schedule, discharge_time, discharge_mask_mode)
 
         if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
-            add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, 1)  # update schedule to charge and discharge at intervals
+            add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, test)  # update schedule to charge and discharge at intervals
             calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
             if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < battery_v2g_floor or \
                     charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
-                add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, -1)  # update schedule to NOT charge and discharge at intervals
+                add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, -test)  # update schedule to NOT charge and discharge at intervals
                 charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
                 charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
 
     return charge_schedule
 
 
-def v2h(charge_schedule):
+def v2h(charge_schedule):  # Redundant
     charge_schedule['Checked'] = charge_schedule['Charge_In_Interval'].copy().abs()
     while charge_schedule['Checked'].sum() < charge_schedule.shape[0] - 1:
 
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
         discharge_time = working_charge_schedule['Home_Power'].idxmax()
-        # if discharge_time == pd.to_datetime('2019-07-25 09:00:00'):
-        #     print('stop')
+
         charge_schedule, working_charge_schedule = discharge_mask(charge_schedule, working_charge_schedule, discharge_time, 'v2h')
 
         if working_charge_schedule['Virtual_Net'].min() < 0:  # and working_charge_schedule['Virtual_Net'].min() < charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Virtual_Cost']
-            charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
-            charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
-            test1 = charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval']
-            test2 = charge_schedule.loc[discharge_time, 'Charge_In_Interval']
-            charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
-            if test1 >= 1:
-                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
-                charge_schedule.loc[discharge_time, 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
-                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
-                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 0
-            elif test2 <= -1:  # shouldn't actually happen
-                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
-                charge_schedule.loc[discharge_time, 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
-                charge_schedule.loc[discharge_time, 'Checked'] = 1
-                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 0
+            # charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+            # charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+            # test1 = charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval']
+            # test2 = charge_schedule.loc[discharge_time, 'Charge_In_Interval']
+            # charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
+
+            add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate)
+            # if test1 >= 1:
+            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+            #     charge_schedule.loc[discharge_time, 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1
+            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 0
+            # elif test2 <= -1:  # shouldn't actually happen
+            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] -= charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+            #     charge_schedule.loc[discharge_time, 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
+            #     charge_schedule.loc[discharge_time, 'Checked'] = 1
+            #     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 0
 
             calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
             if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < battery_v2g_floor or \
@@ -99,9 +106,6 @@ def v2h(charge_schedule):
                 charge_schedule.loc[discharge_time, 'Charge_In_Interval'] += charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
                 charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
                 charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
-
-        # if charge_schedule.loc[pd.to_datetime('2019-07-25 09:00:00'), 'Charge_In_Interval'] != 0:
-        #     test = charge_schedule['Charge_In_Interval'].cumsum()
 
     return charge_schedule
 
@@ -143,7 +147,7 @@ def calculate_running_cost(charge_schedule):
 def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value):
     """Minimise repetition in adding/removing charge/discharge interval pairs to charge schedule."""
     charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] += value
-    charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] += value
+    charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] += value/value
     charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= value
 
 
@@ -307,7 +311,7 @@ def initialise_charge_schedule(appliance_forecast=True, gas=False):
         connection_extract['Appliance_Power'] = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()  # [1:]
         connection_extract['Solar_Power'] = HomeGen.main(arrival_time, departure_time, time_resolution)  # .resample(time_resolution).mean()[1:]
         connection_extract['Heating_Power'] = Heat.mainElec(arrival_time, departure_time, time_resolution)
-        connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(arrival_time, departure_time, time_resolution)
+        # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(arrival_time, departure_time, time_resolution)
         if gas:
             connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * time_resolution / pd.Timedelta('60 min') * gas_price
@@ -349,9 +353,9 @@ tariff_data = 'Inputs\AgileExtract.xls'
 arrival_time = pd.to_datetime('2019-02-21 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
 departure_time = pd.to_datetime('2019-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 time_resolution = pd.Timedelta('15 min')
-vrg_charge_duration = pd.Timedelta('0 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
-v1g_charge_duration = pd.Timedelta('-1 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
-battery_mode = 'EV'  # EV or Home
+vrg_charge_duration = pd.Timedelta('1 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
+v1g_charge_duration = pd.Timedelta('1 h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
+battery_mode = 'Home'  # EV or Home
 gas_price = 9  # 3.8
 gas_efficiency = 0.8
 
@@ -372,8 +376,8 @@ zeros_charge_schedule, gas_cost = initialise_charge_schedule()
 vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
 vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
 v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode)
-v2g_charge_schedule = v2g(v1g_charge_schedule.copy(), battery_mode)
-v2h_charge_schedule = v2h(v2g_charge_schedule.copy())
+v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g')
+v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h')
 # v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
 
 calculate_running_cost(vrg_charge_schedule_max)
