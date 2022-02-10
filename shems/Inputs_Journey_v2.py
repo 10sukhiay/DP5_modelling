@@ -4,13 +4,13 @@ Contains inputs needed to work out charge demand requirment for an EV
 Yazad Sukhia
 Feb 2022
 """
-import pandas as pd
+# import pandas as pd
 
 # initialising data files
-Temp_2019 = pd.read_csv('temp_data_2019.csv')  # Temperature Data
-Journey = pd.read_csv('Sample_Week_Trip.csv')  # Journey Data
+# Temp_2019 = pd.read_csv('temp_data_2019.csv')  # Temperature Data
+# Journey = pd.read_csv('Sample_Week_Trip.csv')  # Journey Data
 # print Temp_2019
-print(Journey)
+# print(Journey)
 
 distance = 130
 charge_rate = 7.4  # kW [THIS IS AN EXAMPLE- VALUE SHOULD BE PROVIDED BY ADAM'S CODE]
