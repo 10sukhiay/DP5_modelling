@@ -129,7 +129,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
     DataElec.index = MaskedOutsideTemp.index
     #PowerTot = Data['Power'].sum()/1000/timeratio
     #print (PowerTot)
-    return Power_df
+    return Power_df.values
 
 def mainASHP(arrival_time, departure_time, time_resolution):
 
@@ -276,4 +276,4 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     
     #PowerTot = Data['Power'].sum()/1000/timeratio
     #print (PowerTot)
-    return Power_df1
+    return Power_df1.values

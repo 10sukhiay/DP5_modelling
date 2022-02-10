@@ -41,7 +41,7 @@ def main(arrival_time, departure_time, time_resolution):
     Time_Generation = Month_Area * System_Efficency * TempCoeff.values / 1000
     Time_Total = Time_Generation.sum() / hour_ratio
 
-    return Time_Generation
+    return Time_Generation.values
 
 # Generation_Text ='Your gerneration over this period could be ', int(Time_Total), 'kWhs';
 # print(Generation_Text)
