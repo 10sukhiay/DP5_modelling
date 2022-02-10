@@ -4,28 +4,31 @@ import os
 
 def mainElec(arrival_time, departure_time, time_resolution):
    
-     ## Variables ##
-     #arrival_time = pd.to_datetime('2019-02-25 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-     #departure_time = pd.to_datetime('2019-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
-     #time_resolution = pd.Timedelta('15 min')
-
+    ## Variables ##
+    #arrival_time = pd.to_datetime('2019-02-25 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+    #departure_time = pd.to_datetime('2019-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+    #time_resolution = pd.Timedelta('15 min')
+    hour_resolution = pd.Timedelta('60 min')
+    timeratio = hour_resolution / time_resolution
+    global DataElec
+    global Power_df
     ## Room Specs ##
     Wall_Height = 2.4;
-    Wall_Length = 8.3;
+    Wall_Length = 10;
     Window_Area = 2;
     No_Windows = 10;
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 15
+    time_res = 5
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
-    Inside_Temp = 18
-    Desired_Temp = 24
+    Inside_Temp = 15
+    Desired_Temp = 21
     Inside_Temp_Change = Desired_Temp - Inside_Temp
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Temp_Data = []
@@ -35,6 +38,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
     
 
     Power_df = pd.DataFrame(columns=['Power'])
+    DataElec = pd.DataFrame()
 
     Total_Window_Area = Window_Area * No_Windows
     Total_Door_Area = Door_Area * No_Doors
@@ -58,15 +62,17 @@ def mainElec(arrival_time, departure_time, time_resolution):
     
     
     ## Room heating ##
-    Heating = 1000
+    
 
     total_rows = len(MaskedOutsideTemp)*time_res
     
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
             
+            Heating = 1000
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
+            test = 0
             
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
             Floor_Loss = FloorU * (Wall_Length * 2) * Outside_Temp_Change
@@ -75,23 +81,24 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
         
-        
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
             
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
-            Inside_Temp = Inside_Temp + Inside_Temp_Heating
-        
+            
+            DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
             Power_df = Power_df.append({'Power': Heating / 1000}, ignore_index=True)
+        
+            Inside_Temp = Inside_Temp + Inside_Temp_Heating
+    
         
         else:
-            Heating = Energy_Loss
-
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
+            test = 1
 
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
             Floor_Loss = FloorU * (Wall_Length * 2) * Outside_Temp_Change
@@ -99,40 +106,55 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Window_Loss = WindowU * (Window_Area * No_Windows) * Outside_Temp_Change
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
-
+            
+            if Energy_Loss < 1000:
+                Heating = Energy_Loss
+            else:
+                Heating = 1000
+        
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
-
+            
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
-            Inside_Temp = Inside_Temp + Inside_Temp_Heating
 
+            DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
             Power_df = Power_df.append({'Power': Heating / 1000}, ignore_index=True)
         
+            Inside_Temp = Inside_Temp + Inside_Temp_Heating
+        
     Power_df.index = MaskedOutsideTemp.index
+    DataElec.index = MaskedOutsideTemp.index
+    #PowerTot = Data['Power'].sum()/1000/timeratio
+    #print (PowerTot)
     return Power_df
 
 def mainASHP(arrival_time, departure_time, time_resolution):
 
+    hour_resolution = pd.Timedelta('60 min')
+    timeratio = hour_resolution / time_resolution
+    global DataASHP
+    global Power_df
+    
     ## Room Specs ##
     Wall_Height = 2.4;
-    Wall_Length = 8.3;
+    Wall_Length = 10;
     Window_Area = 2;
     No_Windows = 10;
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 15
+    time_res = 5
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
-    Inside_Temp = 18
-    Desired_Temp = 24
+    Inside_Temp = 15
+    Desired_Temp = 21
     Inside_Temp_Change = Desired_Temp - Inside_Temp
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Temp_Data = []
@@ -141,7 +163,8 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Energy_Data = []
     
 
-    Power_df = pd.DataFrame(columns=['Power'])
+    Power_df1 = pd.DataFrame(columns=['Power'])
+    DataASHP = pd.DataFrame()
 
     Total_Window_Area = Window_Area * No_Windows
     Total_Door_Area = Door_Area * No_Doors
@@ -165,6 +188,8 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     
     
     ## Room heating ##
+    HeatPump_Rated = 1000
+    HeatPump_Power = HeatPump_Rated
 
     total_rows = len(MaskedOutsideTemp)*time_res
     
@@ -173,9 +198,14 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
+            test = 0
             
-            HeatPump_Power = 1000
+            HeatPump_Power = 1000       
             CoP = 1 / (1 - (Outside_Temp / Inside_Temp))
+            if CoP > 3:
+                CoP = 3
+            if CoP < 0:
+                CoP = 0   
             Heating = HeatPump_Power * CoP
             
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
@@ -185,27 +215,25 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
         
-        
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
             
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
-            Inside_Temp = Inside_Temp + Inside_Temp_Heating
         
+            DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df = Power_df.append({'Power': HeatPump_Power / 1000}, ignore_index=True)
+            Power_df1 = Power_df1.append({'Power': HeatPump_Power / 1000}, ignore_index=True)
         
+            Inside_Temp = Inside_Temp + Inside_Temp_Heating
+            
         else:
-            Heating = Energy_Loss
 
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
-
-            CoP = 1 / (1 - (Outside_Temp / Inside_Temp))
-            HeatPump_Power = Energy_Loss / CoP
-
+            test = 1
+            
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
             Floor_Loss = FloorU * (Wall_Length * 2) * Outside_Temp_Change
             Roof_Loss = RoofU * (Wall_Length * 2) * Outside_Temp_Change
@@ -213,24 +241,39 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
 
+            SmallCorrection = 0.95
+            CoP = 1 / (1 - (Outside_Temp / Inside_Temp)) 
+            if CoP > 3:
+                CoP = 3
+            if CoP < 0:
+                CoP = 0  
+            Heating = HeatPump_Rated * CoP * SmallCorrection
+       
+            Heating = Energy_Loss * SmallCorrection
+            HeatPump_Power = Energy_Loss / CoP  
+            test = 1.1
+        
+            if HeatPump_Power > HeatPump_Rated:
+                Heating = HeatPump_Rated * CoP
+                HeatPump_Power = HeatPump_Rated
+                test = 1.2
 
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
 
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
-            Inside_Temp = Inside_Temp + Inside_Temp_Heating
-
+            
+            DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df = Power_df.append({'Power': HeatPump_Power / 1000}, ignore_index=True)
+            Power_df1 = Power_df1.append({'Power': Heating / 1000}, ignore_index=True)
         
-    Power_df.index = MaskedOutsideTemp.index
-    return Power_df
-
-# a = mainElec('2019-02-25 19:00:00','2019-02-26 07:00:00','15 min')
-
-# BUGGED - ask Adam
-
-# arrival_time = pd.to_datetime('2019-07-20 19:00:00')
-# departure_time = pd.to_datetime('2019-07-26 07:00:00')
+            Inside_Temp = Inside_Temp + Inside_Temp_Heating
+        
+    Power_df1.index = MaskedOutsideTemp.index
+    DataASHP.index = MaskedOutsideTemp.index
+    
+    #PowerTot = Data['Power'].sum()/1000/timeratio
+    #print (PowerTot)
+    return Power_df1
