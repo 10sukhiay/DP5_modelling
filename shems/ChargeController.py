@@ -215,6 +215,8 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.grid()
     plt.legend()
 
+    plt.savefig('./Plots/' + str(row))
+
     # figManager = plt.get_current_fig_manager()
     # figManager.window.state('zoomed')
     #
@@ -222,8 +224,10 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
 
 def initialise_charge_schedule(appliance_forecast, heating_type):
-    agile_extract = pd.read_csv('../Inputs/' + tariff_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract.index = agile_extract.index.tz_localize(None)
+    agile_extract_exp.index = agile_extract.index.tz_localize(None)
     connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
@@ -308,7 +312,8 @@ for row in range(inputs_table.shape[0]):
     price_volatility_factor = inputs_table.loc[row, 'Price Volatility']  # 1
     # tariff_data = 'Inputs\Fixed22Tariff.csv'  # 'Inputs\AgileExtract.xls'
     # tariff_data = 'Inputs\AgileExtract.csv'  # 'Inputs\AgileExtract.xls'
-    tariff_data = inputs_table.loc[row, 'Tariff Data']  # 'Inputs\AgileExtract.xls'
+    tariff_imp_data = inputs_table.loc[row, 'Tariff Import Data']  # 'Inputs\AgileExtract.xls'
+    tariff_exp_data = inputs_table.loc[row, 'Tariff Export Data']  # 'Inputs\AgileExtract.xls'
     arrival_time = pd.to_datetime(inputs_table.loc[row, 'Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
     departure_time = pd.to_datetime(inputs_table.loc[row, 'Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
     time_resolution = pd.Timedelta(inputs_table.loc[row, 'Time Resolution'])
@@ -358,7 +363,7 @@ for row in range(inputs_table.shape[0]):
     print('Done in {:.4f} seconds'.format(toc - tic))
     print('--------------------------------------------------')
 
-    # plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule)
+    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, row)
 
 bigtoc = time.time()
 print('All done in {:.4f} seconds'.format(bigtoc-bigtic))
