@@ -6,6 +6,7 @@ import ApplianceDemand
 import HomeGenerationCode as HomeGen
 import IntergratedHeating as Heat
 # import Journey_charge_v2 as JourneyCharge
+import time
 
 def vrg(charge_schedule, mode):
     """Populates charge schedule such that the vrg charging is done all upon connection"""
@@ -223,7 +224,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
 
 def initialise_charge_schedule(appliance_forecast, heating_type):
-    agile_extract = pd.read_csv(os.getcwd()[:-5] + tariff_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    agile_extract = pd.read_csv('../Inputs/' + tariff_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract.index = agile_extract.index.tz_localize(None)
     connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
@@ -289,8 +290,11 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
 # gas_efficiency = 0.8
 # smart_home = True
 
-inputs_table = pd.read_csv(os.getcwd()[:-5] + 'Inputs\InputSchedule.csv')
-test = range(inputs_table.shape[0])
+bigtic = time.time()
+
+inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
+total_tests = inputs_table.shape[0]
+test = range(total_tests)
 
 for row in range(inputs_table.shape[0]):
     charge_rate = inputs_table.loc[row, 'Charge Rate']  # kW
@@ -326,6 +330,7 @@ for row in range(inputs_table.shape[0]):
     # plt.plot(app_demand_series)
     # plt.plot(app_demand_series_avg)
     # plt.show()
+    tic = time.time()
 
     """Main body of code"""
     zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type)
@@ -344,11 +349,19 @@ for row in range(inputs_table.shape[0]):
     calculate_running_cost(v1g_charge_schedule)
     calculate_running_cost(v2g_charge_schedule)
     calculate_running_cost(v2h_charge_schedule)
+    toc = time.time()
 
-    print('VRG virtual cost of connection period in row ' + str(row) + ': ', vrg_charge_schedule_max['Running_Cost'].iloc[-1])
-    print('V1G virtual cost of connection period in row ' + str(row) + ': ', v1g_charge_schedule['Running_Cost'].iloc[-1])
-    print('V2G virtual cost of connection period in row ' + str(row) + ': ', v2g_charge_schedule['Running_Cost'].iloc[-1])
-    print('V2H virtual cost of connection period in row ' + str(row) + ': ', v2h_charge_schedule['Running_Cost'].iloc[-1])
-    print('___________________________________________________')
+    print('Test ' + str(row + 1) + '/' + str(total_tests) + ' results:')
+    print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
+    print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+    print('V2G virtual cost of connection period: ', v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+    print('V2H virtual cost of connection period: ', v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+    print('HEMAS savings per day: ', (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))
+    print('Done in {:.4f} seconds'.format(toc - tic))
+    print('--------------------------------------------------')
 
-# plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule)
+    # plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule)
+
+bigtoc = time.time()
+print('All done in {:.4f} seconds'.format(bigtoc-bigtic))
+
