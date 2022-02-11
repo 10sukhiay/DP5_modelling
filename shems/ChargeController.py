@@ -156,7 +156,7 @@ def virtual_cost(charge_schedule, charger_type):
 
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
         cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
-        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor / (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
         charge_schedule['Adjusted_Price'] = charge_schedule['Price'] * (charge_rate - charge_schedule['Solar_Power'])/charge_rate
 
@@ -170,7 +170,7 @@ def virtual_cost(charge_schedule, charger_type):
 
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
         cycle_cost_fraction = battery_cost_per_kWh * home_consumption_kW * time_resolution / pd.Timedelta('60 min') / max_battery_cycles  # cost of battery wear due to charging and discharging
-        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor/ (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Cost'] = update_revenue_mask * (charge_schedule['Price'] * (home_consumption_kW - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost) + charge_schedule['Virtual_Cost'] * keep_revenue_mask
 
     charge_schedule['Virtual_Net'] = charge_schedule['Virtual_Cost'] - charge_schedule['Virtual_Revenue']
@@ -178,8 +178,11 @@ def virtual_cost(charge_schedule, charger_type):
     return charge_schedule
 
 
-def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h):
+def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, number):
     """Plot DP4 equivalent figures"""
+
+    fig = plt.figure(figsize=(20, 15), dpi=100)
+
     plt.subplot(411)
     plt.plot(charge_schedule_v2h['Charge_In_Interval'] * charge_rate, label='V2H Charging Demand')
     plt.plot(charge_schedule_v2g['Charge_In_Interval'] * charge_rate, label='V2G Charging Demand')
@@ -215,11 +218,15 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.grid()
     plt.legend()
 
-    plt.savefig('./Plots/' + str(row))
-
     # figManager = plt.get_current_fig_manager()
-    # figManager.window.state('zoomed')
-    #
+    # # figManager.window.state('zoomed')
+    # figManager.frame.Maximize(True)
+
+    # plt.autoscale()
+    plt.title('Test: ' + str(number))
+    fig.savefig('../Plots/' + str(number))
+    plt.clf()
+
     # plt.show()
 
 
@@ -227,7 +234,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract.index = agile_extract.index.tz_localize(None)
-    agile_extract_exp.index = agile_extract.index.tz_localize(None)
+    agile_extract_exp.index = agile_extract_exp.index.tz_localize(None)
     connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
