@@ -1,7 +1,5 @@
 import pandas as pd
-import os
 import matplotlib.pyplot as plt
-import numpy as np
 import ApplianceDemand
 import HomeGenerationCode as HomeGen
 import IntergratedHeating as Heat
