@@ -5,6 +5,7 @@ import HomeGenerationCode as HomeGen
 import IntergratedHeating as Heat
 # import Journey_charge_v2 as JourneyCharge
 import time
+import csv
 
 def vrg(charge_schedule, mode):
     """Populates charge schedule such that the vrg charging is done all upon connection"""
@@ -224,7 +225,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
     # plt.autoscale()
     plt.title('Test: ' + str(number))
-    fig.savefig('../Plots/' + str(number))
+    fig.savefig('../Results/' + str(number))
     plt.clf()
 
     # plt.show()
@@ -304,6 +305,7 @@ bigtic = time.time()
 inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
 total_tests = inputs_table.shape[0]
 test = range(total_tests)
+to_write = pd.DataFrame(columns=['Case', 'VRG Cost', 'V1G Cost', 'V2G Cost', 'VRH Cost', 'HEMAS Net'])
 
 for row in range(inputs_table.shape[0]):
     charge_rate = inputs_table.loc[row, 'Charge Rate']  # kW
@@ -361,6 +363,20 @@ for row in range(inputs_table.shape[0]):
     calculate_running_cost(v2h_charge_schedule)
     toc = time.time()
 
+    to_write_list = [row,
+                vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
+                v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+                v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+                v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+                (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
+
+    to_write.loc[len(to_write)] = to_write_list
+
+    # with open('my_csv.csv', 'a') as f:
+    #     # to_write.to_csv(f, header='v2h Cost')
+    #     wr = csv.writer(fp, dialect='excel')
+    #     wr.writerrow(to_write)
+
     print('Test ' + str(row + 1) + '/' + str(total_tests) + ' results:')
     print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
     print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
@@ -372,6 +388,7 @@ for row in range(inputs_table.shape[0]):
 
     plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, row)
 
+to_write.to_csv('../Results/OutputSchedule.csv')
 bigtoc = time.time()
 print('All done in {:.4f} seconds'.format(bigtoc-bigtic))
 

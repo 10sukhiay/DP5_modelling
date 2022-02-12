@@ -1,5 +1,3 @@
 Case,Description,Battery Properties,Battery Capacity,Battery Cost per kWh,Rated Battery Cycles,Degradation Factor,SoC Floor,SoC Ceil,Charge Rate,Charger Efficiency,Market Properties,Tariff Import Data,Tariff Export Data,kWh Export Fee,Price Volatility,Connection Properties,Plug in SoC,Arrival Time,Departure Time,Reserve Charge Duration,Journey Charge Duration,Simulation Properties,Time Resolution,Battery Mode,Heating Properties,Heating Type,Gas Price,Gas Efficiency,Smart Home
-1,,,54,13700,2437.5,0,0.15,0.9,7.4,0.9,,AgileExtract2.csv,AgileExport.csv,4,1,,0.2,21/02/2019 19:00,26/02/2019 07:00,0.5 h,2 h,,15 min,Home,,Electric,9,0.8,1
+1,Battery Deg,,54,13700,2437.5,0,0.15,0.9,7.4,0.9,,AgileExtract2.csv,AgileExport.csv,4,1,,0.2,21/02/2019 19:00,26/02/2019 07:00,0.5 h,2 h,,15 min,Home,,Electric,9,0.8,1
 2,Battery Deg,,54,13700,2437.5,1,0.15,0.9,7.4,0.9,,AgileExtract2.csv,AgileExport.csv,4,1,,0.2,21/02/2019 19:00,26/02/2019 07:00,0.5 h,2 h,,15 min,Home,,Electric,9,0.8,1
-3,Battery Deg,,54,13700,2437.5,4,0.15,0.9,7.4,0.9,,AgileExtract2.csv,AgileExport.csv,4,1,,0.2,21/02/2019 19:00,26/02/2019 07:00,0.5 h,2 h,,15 min,Home,,Electric,9,0.8,1
-3,Battery Deg,,54,13700,2437.5,10,0.15,0.9,7.4,0.9,,AgileExtract2.csv,AgileExport.csv,4,1,,0.2,21/02/2019 19:00,26/02/2019 07:00,0.5 h,2 h,,15 min,Home,,Electric,9,0.8,1
