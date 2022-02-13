@@ -7,14 +7,11 @@ import numpy as np
 def mainElec(arrival_time, departure_time, time_resolution):
    
     ## Variables ##
-    #arrival_time = pd.to_datetime('2019-02-25 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-    #departure_time = pd.to_datetime('2019-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
-    #time_resolution = pd.Timedelta('15 min')
     hour_resolution = pd.Timedelta('60 min')
     timeratio = hour_resolution / time_resolution
     global DataElec
     global Power_df
-    global TotalPower
+    
     ## Room Specs ##
     Wall_Height = 2.4;
     Wall_Length = 10;
@@ -23,7 +20,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 5
+    time_res = 15
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -32,12 +29,10 @@ def mainElec(arrival_time, departure_time, time_resolution):
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
     Inside_Temp = 15
     Desired_Temp = 21
-    Inside_Temp_Change = Desired_Temp - Inside_Temp
     Outside_Temp_Change = Inside_Temp - Outside_Temp
-    Temp_Data = []
     Time = 0
     Time_Data = []
-    Energy_Data = []
+
     
 
     Power_df = pd.DataFrame(columns=['Power'])
@@ -50,7 +45,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
 
     ## Energy Needed to heat the room ##
     Density_Air = 1.225
-    SHC_Air = 1000
+    SHC_Water = 4187
         
     ## Loss through walls,roof and floor ##
     WallU = 0.3
@@ -62,17 +57,20 @@ def mainElec(arrival_time, departure_time, time_resolution):
     DoorU = 3
     Door_Area = 2
     No_Doors = 2
-    
-    
+    SmallCorrection = 0.95
     ## Room heating ##
+    PowerRating = 9000
+    ShowerTemp = 40
+    TotalHeatedWater = 0
+    TankVolume = 120
     
-
     total_rows = len(MaskedOutsideTemp)*time_res
+    Water = mainShower(arrival_time, departure_time,time_resolution)
     
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
             
-            Heating = 1000
+            Heating = PowerRating 
             Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
             Outside_Temp_Change = Inside_Temp - Outside_Temp
             test = 0
@@ -85,11 +83,13 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
         
             Per_Second_change = Heating - Energy_Loss
-            Per_min_Energy = Per_Second_change * 60 * time_res
+            Per_min_Energy = Per_Second_change * 60 * time_res 
+            Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Water
             
-            Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
+            WaterUse = Water.iloc[Tempno, 0]
+            TotalHeatedWater = TotalHeatedWater - int(WaterUse)
             
-            DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss}, ignore_index=True)
+            DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -110,17 +110,35 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
             
-            if Energy_Loss < 1000:
-                Heating = Energy_Loss
+            if Energy_Loss < PowerRating:
+                Heating = Energy_Loss * SmallCorrection
             else:
-                Heating = 1000
+                Heating = PowerRating * SmallCorrection
         
             Per_Second_change = Heating - Energy_Loss
-            Per_min_Energy = Per_Second_change * 60 * time_res
+            Per_min_Energy = Per_Second_change * 60 * time_res 
+            Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Water
             
-            Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
+            WaterUse = Water.iloc[Tempno, 0]
+            TotalHeatedWater = TotalHeatedWater - int(WaterUse)
 
-            DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss}, ignore_index=True)
+            if Heating < PowerRating and TotalHeatedWater < TankVolume:
+                HeatedWater = (PowerRating - Heating) / (SHC_Water * (ShowerTemp - Outside_Temp))
+                HeatedWater = HeatedWater * 60 * time_res 
+                WaterCapacity = TankVolume - TotalHeatedWater
+                if HeatedWater > WaterCapacity:
+                    HeatedWater = WaterCapacity
+                    EnergyForWAter = WaterCapacity * SHC_Water * (ShowerTemp - Outside_Temp) / (60*time_res)
+                    Heating = Heating + EnergyForWAter
+                    test = 1.1
+                else:
+                    EnergyForWAter = PowerRating - Heating
+                    Heating = Heating + EnergyForWAter
+                    test = 1.2
+                
+                TotalHeatedWater = TotalHeatedWater + HeatedWater
+
+            DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -130,24 +148,13 @@ def mainElec(arrival_time, departure_time, time_resolution):
         
     Power_df.index = MaskedOutsideTemp.index
     DataElec.index = MaskedOutsideTemp.index
-    #PowerTot = Data['Power'].sum()/1000/timeratio
-    #print (PowerTot)
-<<<<<<< Updated upstream
-    return Power_df.values
-=======
-    
-    #ShowerPower = mainShower(arrival_time, departure_time)
-    #TotalPower =  Power_df["Power"] + ShowerPower["Power"]
-    #TotalPower = TotalPower.dropna()
-    
+
     return Power_df
->>>>>>> Stashed changes
 
 def mainASHP(arrival_time, departure_time, time_resolution):
 
-    hour_resolution = pd.Timedelta('60 min')
-    timeratio = hour_resolution / time_resolution
     global Power_df1
+    global DataASHP
         
     ## Room Specs ##
     Wall_Height = 2.4;
@@ -157,7 +164,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 5
+    time_res = 15
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -166,12 +173,10 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
     Inside_Temp = 15
     Desired_Temp = 21
-    Inside_Temp_Change = Desired_Temp - Inside_Temp
     Outside_Temp_Change = Inside_Temp - Outside_Temp
-    Temp_Data = []
     Time = 0
     Time_Data = []
-    Energy_Data = []
+
     
 
     Power_df1 = pd.DataFrame(columns=['Power'])
@@ -201,8 +206,13 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     ## Room heating ##
     HeatPump_Rated = 1000
     HeatPump_Power = HeatPump_Rated
+    TotalHeatedWater = 0
+    TankVolume = 120
+    SHC_Water = 4180
+    ShowerTemp = 40
 
     total_rows = len(MaskedOutsideTemp)*time_res
+    Water = mainShower(arrival_time, departure_time,time_resolution)
     
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
@@ -211,7 +221,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Outside_Temp_Change = Inside_Temp - Outside_Temp
             test = 0
             
-            HeatPump_Power = 1000       
+            HeatPump_Power = HeatPump_Rated       
             CoP = 1 / (1 - (Outside_Temp / Inside_Temp))
             if CoP > 3:
                 CoP = 3
@@ -228,11 +238,12 @@ def mainASHP(arrival_time, departure_time, time_resolution):
         
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
-            
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
-            #Water_Heating = 0
+            
+            WaterUse = Water.iloc[Tempno, 0]
+            TotalHeatedWater = TotalHeatedWater - int(WaterUse)
         
-            DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'Water_Heating':Water_Heating}, ignore_index=True)
+            DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -263,26 +274,40 @@ def mainASHP(arrival_time, departure_time, time_resolution):
        
             Heating = Energy_Loss * SmallCorrection
             HeatPump_Power = Energy_Loss / CoP  
-            test = 1.1
-        
+            test = 1.14
+            
+            WaterUse = Water.iloc[Tempno, 0]
+            TotalHeatedWater = TotalHeatedWater - int(WaterUse)
+                        
+            if TotalHeatedWater < TankVolume:
+                HeatedWater = (HeatPump_Rated - HeatPump_Power) / (SHC_Water * (ShowerTemp - Outside_Temp))
+                HeatedWater = HeatedWater * 60 * time_res 
+                WaterCapacity = TankVolume - TotalHeatedWater
+                if HeatedWater > WaterCapacity:
+                    HeatedWater = WaterCapacity
+                    EnergyForWAter = WaterCapacity * SHC_Water * (ShowerTemp - Outside_Temp) / (60*time_res)
+                    HeatPump_Power = HeatPump_Power + EnergyForWAter
+                    test = 1.1
+                else:
+                    EnergyForWAter = HeatPump_Rated - HeatPump_Power
+                    HeatPump_Power = HeatPump_Power + EnergyForWAter
+                    
+            TotalHeatedWater = TotalHeatedWater + HeatedWater   
+           
             if HeatPump_Power > HeatPump_Rated:
                 Heating = HeatPump_Rated * CoP
                 HeatPump_Power = HeatPump_Rated
                 test = 1.2
+                HeatedWater = 0
+                TotalHeatedWater = TotalHeatedWater + HeatedWater
 
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
 
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
             
-           # if HeatPump_Power < HeatPump_Rated:
-                #Water_Heating = (HeatPump_Rated - HeatPump_Power) * 60 * time_res / 1000
-           # else:
-                #Water_Heating = 0
-                
             
-            
-            DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'Water_Heating':Water_Heating}, ignore_index=True)
+            DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -292,58 +317,22 @@ def mainASHP(arrival_time, departure_time, time_resolution):
         
     Power_df1.index = MaskedOutsideTemp.index
     DataASHP.index = MaskedOutsideTemp.index
-
-    #ShowerPower = mainShower(arrival_time, departure_time)
-    #ShowerPowerMask = ShowerPower/ShowerPower
-    #ShowerPowerMask = ShowerPowerMask.fillna(0)
-    #TotalPower = ShowerPowerMask * DataASHP['Water_Heating'].values
-   #TotalPowerGen = ShowerPowerMask.multiply(DataASHP['Water_Heating'], axis=0)/1000
-    #TotalPower = ShowerPower - TotalPowerGen
-    Power_df1 = Power_df1 + TotalPower
-   #Power_df1 = Power_df1.dropna()
-    
-    #PowerTot = Data['Power'].sum()/1000/timeratio
-    #print (PowerTot)
-<<<<<<< Updated upstream
-    return Power_df1.values
-=======
     return Power_df1
 
-def mainShower(arrival_time, departure_time):
-    # arrival_time = pd.to_datetime('2019-02-23 19:15:00')
-    # departure_time = pd.to_datetime('2019-02-27 7:00:00')
+def mainShower(arrival_time, departure_time,time_resolution):
+    global ShowerPower
     
     app_data = 'Inputs\Typical_home_demand.xls'
     app_demand = pd.read_excel(os.getcwd()[:-5] + app_data)
-    time_resolution = pd.Timedelta('15 min')
-    #time_resolution = pd.Timedelta(app_demand['Duration (h)'].min(), 'h')
-    # app_demand_series = pd.date_range(arrival_time, departure_time, freq=time_resolution)
     date_time_index = pd.date_range(arrival_time, departure_time + time_resolution, freq=time_resolution)
     ShowerPower = pd.DataFrame(0, index=date_time_index, columns=['Power'])
     dates = list(set(date_time_index.date))
-    
-    time_res = 15
-    Water = 40
-    ShowerWater = Water / (60 / time_res)
-    Water_SHC = 4187
-    Water_Temp_Change = 40 - 15
-
-    # app_demand_series['Day of Week'] = app_demand_series.index.dayofweek
-
+        
     for index, row in app_demand.iterrows():
         if row['Device'] == 'Shower':
             for day in dates:
                 time_on = pd.to_datetime(str(day) + ' ' + str(row['Time On']))
-                time_on = time_on - timedelta(hours=1)
-                ShowerPower.loc[time_on: time_on + pd.Timedelta(row[1], 'h'), 'Power'] += row[
-                    'Power']
-    ShowerPower = ShowerPower * ShowerWater * Water_SHC * Water_Temp_Change / (60*60) / 1000
-    print(ShowerPower.sum())
-    
-            
-
-    # plt.plot(app_demand_series)
-    # plt.show()
-
+                ShowerPower.loc[time_on: time_on , 'Power'] += row['Power']
+    ShowerPower = ShowerPower * 40
+        
     return ShowerPower
->>>>>>> Stashed changes
