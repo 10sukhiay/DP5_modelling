@@ -21,7 +21,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 5
+    time_res = 15
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -156,12 +156,12 @@ def mainElec(arrival_time, departure_time, time_resolution):
     DataPlot.index = MaskedOutsideTemp.index
     DataPlot1.index = MaskedOutsideTemp.index
     
-    DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    plt.legend(loc='upper right')
+    #DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    #DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    #plt.legend(loc='upper right')
 
-    TotalPower = Power_df.sum()
-    print(TotalPower)
+    #TotalPower = Power_df.sum()
+    #print(TotalPower)
 
     return Power_df
 
@@ -180,7 +180,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 5
+    time_res = 15
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -339,12 +339,12 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     DataPlot.index = MaskedOutsideTemp.index
     DataPlot1.index = MaskedOutsideTemp.index
     
-    DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    plt.legend(loc='upper right')
+    #DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    #DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    #plt.legend(loc='upper right')
     
-    TotalPower = Power_df1.sum()
-    print(TotalPower)
+    #TotalPower = Power_df1.sum()
+    #print(TotalPower)
     
     return Power_df1
 
@@ -363,7 +363,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 5
+    time_res = 15
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -523,12 +523,12 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     DataPlot.index = MaskedOutsideTemp.index
     DataPlot1.index = MaskedOutsideTemp.index
     
-    DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    plt.legend(loc='upper right')
+    #DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    #DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    #plt.legend(loc='upper right')
     
-    TotalPower = Power_df2.sum()
-    print(TotalPower)
+    #TotalPower = Power_df2.sum()
+    #print(TotalPower)
     
     return Power_df2
 
