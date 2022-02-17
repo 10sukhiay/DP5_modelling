@@ -5,12 +5,30 @@ Yazad Sukhia
 Feb 2022
 """
 import pandas as pd
+import googlemaps # pip install googlemaps (or pycharm installation package)
+
+
+API_KEY = 'AIzaSyC08mMBGKbKzHBZ2FX7JmUsv3Kh9KPkIPg'
+map_client = googlemaps.Client(API_KEY)
+
+journey_start = "Bristol, UK, BS8 2AB"
+journey_end = "Bristol, UK, BS1 2NJ"
+
+
+
+# def define_jounrey():
+#     API_KEY = 'AIzaSyC08mMBGKbKzHBZ2FX7JmUsv3Kh9KPkIPg'
+#     map_client = googlemaps.Client(API_KEY)
+#     journey_start = "Bristol, UK, BS8 2AB"
+#     journey_end = "Bristol, UK, BS1 2NJ"
+#     return API_KEY, map_client, journey_start, journey_end
+
 
 # initialising data files
-Temp_2019 = pd.read_csv('temp_data_2019.csv')  # Temperature Data
-Journey = pd.read_csv('Sample_Week_Trip.csv')  # Journey Data
-print(Temp_2019)
-print(Journey)
+# Temp_2019 = pd.read_csv('temp_data_2019.csv')  # Temperature Data
+# Journey = pd.read_csv('Sample_Week_Trip.csv')  # Journey Data
+# print(Temp_2019)
+# print(Journey)
 
 distance = 130
 charge_rate = 7.4  # kW [THIS IS AN EXAMPLE- VALUE SHOULD BE PROVIDED BY ADAM'S CODE]
@@ -23,7 +41,7 @@ temp = 9  # celcius
 # r_v1 = 355 # km
 # c_v1 = 55 # kWh
 # m_v1 = 1684 # kg
-#
+
 # # Vehicle 2 - Nissan Leaf
 # r_v2 = 240 # km
 # c_v2 = 40 # kWh
