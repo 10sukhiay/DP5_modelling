@@ -6,5 +6,5 @@ save_non_project_files = False
 
 [main]
 version = 0.2.0
-recent_files = ['shems\\IntergratedHeating.py', '..\\..\\ThermoModel\\Thermo2.1.py', 'shems\\ChargeController.py']
+recent_files = ['shems\\IntergratedHeating.py', 'shems\\ChargeController.py', 'shems\\HomeGenerationCode.py', 'shems\\ApplianceDemand.py', 'shems\\Inputs_Journey_v2.py', 'shems\\Journey_charge_v2.py']
 
