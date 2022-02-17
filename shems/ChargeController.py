@@ -246,7 +246,9 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()  # [1:]
         connection_extract['Solar_Power'] = HomeGen.main(arrival_time.replace(year=2019), departure_time.replace(year=2019), time_resolution)  # .resample(time_resolution).mean()[1:]
+        pic = time.time()
         connection_extract['Heating_Power'] = Heat.mainElec(arrival_time.replace(year=2019), departure_time.replace(year=2019), time_resolution)
+        poc = time.time()
         # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(arrival_time, departure_time, time_resolution)
         if heating_type == 'Gas':
             connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
@@ -271,6 +273,98 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
             total_gas_cost = 0
 
     return connection_extract, total_gas_cost
+
+
+def main(inputs, row):
+    global charge_rate
+    global battery_capacity
+    global charger_efficiency
+    global plug_in_SoC
+    global battery_cost_per_kWh
+    global battery_v2g_floor
+    global battery_v2g_ceil
+    global kWh_export_fee
+    global lifetime_ageing_factor
+    global max_battery_cycles
+    global price_volatility_factor
+    global tariff_imp_data
+    global tariff_exp_data
+    global arrival_time
+    global departure_time
+    global time_resolution
+    global vrg_charge_duration
+    global v1g_charge_duration
+    global battery_mode
+    global heating_type
+    global gas_price
+    global gas_efficiency
+    global smart_home
+
+    charge_rate = inputs['Charge Rate']  # kW
+    battery_capacity = inputs['Battery Capacity']  # kWh
+    charger_efficiency = inputs['Charger Efficiency']  # 0.9 for charger UPDATE TO HAVE SEPARATE VALUE FOR CHARGE AND DISCHARGE
+    plug_in_SoC = inputs['Plug in SoC']
+    battery_cost_per_kWh = inputs['Battery Cost per kWh']  # 137e2
+    battery_v2g_floor = inputs['SoC Floor']
+    battery_v2g_ceil = inputs['SoC Ceil']
+    kWh_export_fee = inputs['kWh Export Fee']  # 4 p
+    lifetime_ageing_factor = inputs['Degradation Factor']  # 1
+    max_battery_cycles = inputs['Rated Battery Cycles']  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
+    price_volatility_factor = inputs['Price Volatility']  # 1
+    tariff_imp_data = inputs['Tariff Import Data']  # 'Inputs\AgileExtract.xls'
+    tariff_exp_data = inputs['Tariff Export Data']  # 'Inputs\AgileExtract.xls'
+    arrival_time = pd.to_datetime(inputs['Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+    departure_time = pd.to_datetime(inputs['Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+    time_resolution = pd.Timedelta(inputs['Time Resolution'])
+    vrg_charge_duration = pd.Timedelta(inputs['Reserve Charge Duration'])  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
+    v1g_charge_duration = pd.Timedelta(inputs['Journey Charge Duration'])  # 2 TO be provided by Yaz's algo to calculate energy from distance
+    battery_mode = inputs['Battery Mode']  # EV or Home
+    heating_type = inputs['Heating Type']
+    gas_price = inputs['Gas Price']  # 3.8 p
+    gas_efficiency = inputs['Gas Efficiency']
+    smart_home = inputs['Smart Home']
+
+    tic = time.time()
+
+    """Main body of code"""
+    zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type)
+
+    # plt.plot(zeros_charge_schedule['Home_Power'], label='Home Power')
+    # plt.show()
+
+    vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
+    vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
+    v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode)
+    v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g')
+    v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h')
+    # v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
+
+    calculate_running_cost(vrg_charge_schedule_max)
+    calculate_running_cost(v1g_charge_schedule)
+    calculate_running_cost(v2g_charge_schedule)
+    calculate_running_cost(v2h_charge_schedule)
+    toc = time.time()
+
+    results = [vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
+               v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+               v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+               v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+               (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
+
+    # print('Test ' + str(row) + ' results:')
+    # print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
+    # print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+    # print('V2G virtual cost of connection period: ', v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+    # print('V2H virtual cost of connection period: ', v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+    # print('HEMAS savings per day: ',
+    #       (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))
+    print('Test ' + str(row) + ' done in {:.4f} seconds'.format(toc - tic))
+    print('--------------------------------------------------')
+
+    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, row)
+
+    return results
+
 
 
 """Inputs from researched data. IDEA: make readable as .txt batch files"""
@@ -300,95 +394,95 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
 # gas_efficiency = 0.8
 # smart_home = True
 
-bigtic = time.time()
-
-inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
-total_tests = inputs_table.shape[0]
-test = range(total_tests)
-to_write = pd.DataFrame(columns=['Case', 'VRG Cost', 'V1G Cost', 'V2G Cost', 'VRH Cost', 'HEMAS Net'])
-
-for row in range(inputs_table.shape[0]):
-    charge_rate = inputs_table.loc[row, 'Charge Rate']  # kW
-    battery_capacity = inputs_table.loc[row, 'Battery Capacity']  # kWh
-    charger_efficiency = inputs_table.loc[row, 'Charger Efficiency'] # 0.9 for charger UPDATE TO HAVE SEPARATE VALUE FOR CHARGE AND DISCHARGE
-    plug_in_SoC = inputs_table.loc[row, 'Plug in SoC']
-    battery_cost_per_kWh = inputs_table.loc[row, 'Battery Cost per kWh']  # 137e2
-    battery_v2g_floor = inputs_table.loc[row, 'SoC Floor']
-    battery_v2g_ceil = inputs_table.loc[row, 'SoC Ceil']
-    kWh_export_fee = inputs_table.loc[row, 'kWh Export Fee']  # 4 p
-    lifetime_ageing_factor = inputs_table.loc[row, 'Degradation Factor'] # 1
-    max_battery_cycles = inputs_table.loc[row, 'Rated Battery Cycles']  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
-    price_volatility_factor = inputs_table.loc[row, 'Price Volatility']  # 1
-    # tariff_data = 'Inputs\Fixed22Tariff.csv'  # 'Inputs\AgileExtract.xls'
-    # tariff_data = 'Inputs\AgileExtract.csv'  # 'Inputs\AgileExtract.xls'
-    tariff_imp_data = inputs_table.loc[row, 'Tariff Import Data']  # 'Inputs\AgileExtract.xls'
-    tariff_exp_data = inputs_table.loc[row, 'Tariff Export Data']  # 'Inputs\AgileExtract.xls'
-    arrival_time = pd.to_datetime(inputs_table.loc[row, 'Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-    departure_time = pd.to_datetime(inputs_table.loc[row, 'Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
-    time_resolution = pd.Timedelta(inputs_table.loc[row, 'Time Resolution'])
-    vrg_charge_duration = pd.Timedelta(inputs_table.loc[row, 'Reserve Charge Duration'])  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
-    # v1g_charge_duration = pd.to_timedelta(JourneyCharge.main()[2], 'h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
-    v1g_charge_duration = pd.Timedelta(inputs_table.loc[row, 'Journey Charge Duration'])  # 2 TO be provided by Yaz's algo to calculate energy from distance
-    battery_mode = inputs_table.loc[row, 'Battery Mode']  # EV or Home
-    heating_type = inputs_table.loc[row, 'Heating Type']
-    gas_price = inputs_table.loc[row, 'Gas Price']  # 3.8 p
-    gas_efficiency = inputs_table.loc[row, 'Gas Efficiency']
-    smart_home = inputs_table.loc[row, 'Smart Home']
-
-    # app_demand_series = ApplianceDemand.main(arrival_time, departure_time)
-    # app_demand_series_frac = app_demand_series.resample(time_resolution).mean()
-    # app_demand_series_frac = app_demand_series_frac/charge_rate
-
-    # plt.plot(app_demand_series)
-    # plt.plot(app_demand_series_avg)
-    # plt.show()
-    tic = time.time()
-
-    """Main body of code"""
-    zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type)
-
-    # plt.plot(zeros_charge_schedule['Home_Power'], label='Home Power')
-    # plt.show()
-
-    vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
-    vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
-    v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode)
-    v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g')
-    v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h')
-    # v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
-
-    calculate_running_cost(vrg_charge_schedule_max)
-    calculate_running_cost(v1g_charge_schedule)
-    calculate_running_cost(v2g_charge_schedule)
-    calculate_running_cost(v2h_charge_schedule)
-    toc = time.time()
-
-    to_write_list = [row,
-                vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
-                v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
-                v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
-                v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
-                (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
-
-    to_write.loc[len(to_write)] = to_write_list
-
-    # with open('my_csv.csv', 'a') as f:
-    #     # to_write.to_csv(f, header='v2h Cost')
-    #     wr = csv.writer(fp, dialect='excel')
-    #     wr.writerrow(to_write)
-
-    print('Test ' + str(row + 1) + '/' + str(total_tests) + ' results:')
-    print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
-    print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
-    print('V2G virtual cost of connection period: ', v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
-    print('V2H virtual cost of connection period: ', v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
-    print('HEMAS savings per day: ', (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))
-    print('Done in {:.4f} seconds'.format(toc - tic))
-    print('--------------------------------------------------')
-
-    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, row)
-
-to_write.to_csv('../Results/OutputSchedule.csv')
-bigtoc = time.time()
-print('All done in {:.4f} seconds'.format(bigtoc-bigtic))
+# bigtic = time.time()
+#
+# inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
+# total_tests = inputs_table.shape[0]
+# test = range(total_tests)
+# to_write = pd.DataFrame(columns=['Case', 'VRG Cost', 'V1G Cost', 'V2G Cost', 'VRH Cost', 'HEMAS Net'])
+#
+# for row in range(inputs_table.shape[0]):
+#     charge_rate = inputs_table.loc[row, 'Charge Rate']  # kW
+#     battery_capacity = inputs_table.loc[row, 'Battery Capacity']  # kWh
+#     charger_efficiency = inputs_table.loc[row, 'Charger Efficiency'] # 0.9 for charger UPDATE TO HAVE SEPARATE VALUE FOR CHARGE AND DISCHARGE
+#     plug_in_SoC = inputs_table.loc[row, 'Plug in SoC']
+#     battery_cost_per_kWh = inputs_table.loc[row, 'Battery Cost per kWh']  # 137e2
+#     battery_v2g_floor = inputs_table.loc[row, 'SoC Floor']
+#     battery_v2g_ceil = inputs_table.loc[row, 'SoC Ceil']
+#     kWh_export_fee = inputs_table.loc[row, 'kWh Export Fee']  # 4 p
+#     lifetime_ageing_factor = inputs_table.loc[row, 'Degradation Factor'] # 1
+#     max_battery_cycles = inputs_table.loc[row, 'Rated Battery Cycles']  # * (1 + 0.625 * lifetime_ageing_factor)  # for TM3, factored to account for factory rating including lifetime degradation 65/40
+#     price_volatility_factor = inputs_table.loc[row, 'Price Volatility']  # 1
+#     # tariff_data = 'Inputs\Fixed22Tariff.csv'  # 'Inputs\AgileExtract.xls'
+#     # tariff_data = 'Inputs\AgileExtract.csv'  # 'Inputs\AgileExtract.xls'
+#     tariff_imp_data = inputs_table.loc[row, 'Tariff Import Data']  # 'Inputs\AgileExtract.xls'
+#     tariff_exp_data = inputs_table.loc[row, 'Tariff Export Data']  # 'Inputs\AgileExtract.xls'
+#     arrival_time = pd.to_datetime(inputs_table.loc[row, 'Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+#     departure_time = pd.to_datetime(inputs_table.loc[row, 'Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+#     time_resolution = pd.Timedelta(inputs_table.loc[row, 'Time Resolution'])
+#     vrg_charge_duration = pd.Timedelta(inputs_table.loc[row, 'Reserve Charge Duration'])  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
+#     # v1g_charge_duration = pd.to_timedelta(JourneyCharge.main()[2], 'h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
+#     v1g_charge_duration = pd.Timedelta(inputs_table.loc[row, 'Journey Charge Duration'])  # 2 TO be provided by Yaz's algo to calculate energy from distance
+#     battery_mode = inputs_table.loc[row, 'Battery Mode']  # EV or Home
+#     heating_type = inputs_table.loc[row, 'Heating Type']
+#     gas_price = inputs_table.loc[row, 'Gas Price']  # 3.8 p
+#     gas_efficiency = inputs_table.loc[row, 'Gas Efficiency']
+#     smart_home = inputs_table.loc[row, 'Smart Home']
+#
+#     # app_demand_series = ApplianceDemand.main(arrival_time, departure_time)
+#     # app_demand_series_frac = app_demand_series.resample(time_resolution).mean()
+#     # app_demand_series_frac = app_demand_series_frac/charge_rate
+#
+#     # plt.plot(app_demand_series)
+#     # plt.plot(app_demand_series_avg)
+#     # plt.show()
+#     tic = time.time()
+#
+#     """Main body of code"""
+#     zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type)
+#
+#     # plt.plot(zeros_charge_schedule['Home_Power'], label='Home Power')
+#     # plt.show()
+#
+#     vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
+#     vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
+#     v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode)
+#     v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g')
+#     v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h')
+#     # v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
+#
+#     calculate_running_cost(vrg_charge_schedule_max)
+#     calculate_running_cost(v1g_charge_schedule)
+#     calculate_running_cost(v2g_charge_schedule)
+#     calculate_running_cost(v2h_charge_schedule)
+#     toc = time.time()
+#
+#     to_write_list = [row,
+#                 vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
+#                 v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+#                 v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+#                 v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
+#                 (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
+#
+#     to_write.loc[len(to_write)] = to_write_list
+#
+#     # with open('my_csv.csv', 'a') as f:
+#     #     # to_write.to_csv(f, header='v2h Cost')
+#     #     wr = csv.writer(fp, dialect='excel')
+#     #     wr.writerrow(to_write)
+#
+#     print('Test ' + str(row + 1) + '/' + str(total_tests) + ' results:')
+#     print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
+#     print('V1G virtual cost of connection period: ', v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+#     print('V2G virtual cost of connection period: ', v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+#     print('V2H virtual cost of connection period: ', v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
+#     print('HEMAS savings per day: ', (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))
+#     print('Done in {:.4f} seconds'.format(toc - tic))
+#     print('--------------------------------------------------')
+#
+#     plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, row)
+#
+# to_write.to_csv('../Results/OutputSchedule.csv')
+# bigtoc = time.time()
+# print('All done in {:.4f} seconds'.format(bigtoc-bigtic))
 
