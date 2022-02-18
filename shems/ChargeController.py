@@ -299,6 +299,7 @@ def main(inputs, row):
     global gas_price
     global gas_efficiency
     global smart_home
+    global case
 
     charge_rate = inputs['Charge Rate']  # kW
     battery_capacity = inputs['Battery Capacity']  # kWh
@@ -323,6 +324,7 @@ def main(inputs, row):
     gas_price = inputs['Gas Price']  # 3.8 p
     gas_efficiency = inputs['Gas Efficiency']
     smart_home = inputs['Smart Home']
+    case = inputs['Case']
 
     tic = time.time()
 
@@ -345,7 +347,8 @@ def main(inputs, row):
     calculate_running_cost(v2h_charge_schedule)
     toc = time.time()
 
-    results = [vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
+    results = [case,
+               vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
                v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
                v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
                v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
