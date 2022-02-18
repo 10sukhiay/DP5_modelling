@@ -39,7 +39,11 @@ def run_multi():
 
 def pcs(TBM_results):
     test = set(TBM_results['Case'])
-
-
+    for case in test:
+        case_mask = TBM_results['Case'] == case
+        total_savings = (case_mask*TBM_results['HEMAS Net']).sum()
+    return total_savings
 
 results = run_multi()
+print(pcs(results))
+
