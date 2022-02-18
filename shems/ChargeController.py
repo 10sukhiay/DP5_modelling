@@ -179,7 +179,7 @@ def virtual_cost(charge_schedule, charger_type):
     return charge_schedule
 
 
-def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, number):
+def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, case, row):
     """Plot DP4 equivalent figures"""
 
     fig = plt.figure(figsize=(20, 15), dpi=100)
@@ -224,8 +224,9 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     # figManager.frame.Maximize(True)
 
     # plt.autoscale()
-    plt.title('Test: ' + str(number))
-    fig.savefig('../Results/' + str(number))
+    # plt.title('Test: ' + str(number))  # Doesn't work
+    fig.suptitle('Row: ' + str(row + 2) + ', Case: ' + str(case))
+    fig.savefig('../Results/Figures/' + str(row + 2) + ' ' + str(case))
     plt.clf()
 
     # plt.show()
@@ -364,7 +365,7 @@ def main(inputs, row):
     print('Test ' + str(row) + ' done in {:.4f} seconds'.format(toc - tic))
     print('--------------------------------------------------')
 
-    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, row)
+    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, case, row)
 
     return results
 

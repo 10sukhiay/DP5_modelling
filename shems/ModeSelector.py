@@ -47,8 +47,11 @@ def pcs(TBM_results):
         PCS_result_list.insert(0, case)
         PCS_results.loc[len(PCS_results)] = PCS_result_list
 
-    return PCS_result
+    PCS_results.to_csv('../Results/PCSResults.csv')
+
+    return PCS_results
 
 results = run_multi()
-print(pcs(results))
+PCS_results = pcs(results)
+print(PCS_results)
 
