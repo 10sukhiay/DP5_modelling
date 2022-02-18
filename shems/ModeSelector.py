@@ -38,11 +38,16 @@ def run_multi():
 
 
 def pcs(TBM_results):
-    test = set(TBM_results['Case'])
-    for case in test:
+    PCS_results = pd.DataFrame(columns=['Case', 'VRG Cost', 'V1G Cost', 'V2G Cost', 'VRH Cost', 'HEMAS Net'])
+
+    for case in set(TBM_results['Case']):
         case_mask = TBM_results['Case'] == case
-        total_savings = (case_mask*TBM_results['HEMAS Net']).sum()
-    return total_savings
+        PCS_result = TBM_results.loc[case_mask, :].sum()
+        PCS_result_list = list(PCS_result[1:])
+        PCS_result_list.insert(0, case)
+        PCS_results.loc[len(PCS_results)] = PCS_result_list
+
+    return PCS_result
 
 results = run_multi()
 print(pcs(results))
