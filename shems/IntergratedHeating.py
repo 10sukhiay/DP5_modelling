@@ -8,8 +8,8 @@ def mainElec(arrival_time, departure_time, time_resolution):
     plt.close('all')
    
     ## Variables ##
-    hour_resolution = pd.Timedelta('60 min')
-    timeratio = hour_resolution / time_resolution
+    time_res =  pd.Timedelta('60 min')
+    #timeratio = hour_resolution / time_resolution
     global DataElec
     global Power_df
     
@@ -58,9 +58,9 @@ def mainElec(arrival_time, departure_time, time_resolution):
     DoorU = 3
     Door_Area = 2
     No_Doors = 2
-    SmallCorrection = 0.95
+    SmallCorrection = 1
     ## Room heating ##
-    PowerRating = 2000
+    PowerRating = 1000
     ShowerTemp = 40
     TotalHeatedWater = 0
     TankVolume = 120
@@ -87,6 +87,13 @@ def mainElec(arrival_time, departure_time, time_resolution):
             Per_min_Energy = Per_Second_change * 60 * time_res 
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Water
             
+            if (Inside_Temp_Heating + Inside_Temp) > Desired_Temp:
+                Per_min_Energy = (Desired_Temp - Inside_Temp) * Density_Air * Room_Volume * SHC_Water
+                Per_Second_change = Per_min_Energy / 60 / time_res
+                Heating = Energy_Loss + Per_Second_change
+            else:
+                Heating = PowerRating
+                
             WaterUse = Water.iloc[Tempno, 0]
             TotalHeatedWater = TotalHeatedWater - int(WaterUse)
             
@@ -156,9 +163,9 @@ def mainElec(arrival_time, departure_time, time_resolution):
     DataPlot.index = MaskedOutsideTemp.index
     DataPlot1.index = MaskedOutsideTemp.index
     
-    #DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    #DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    #plt.legend(loc='upper right')
+    DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    plt.legend(loc='upper right')
 
     #TotalPower = Power_df.sum()
     #print(TotalPower)
@@ -180,7 +187,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 15
+    time_res = 5
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -255,12 +262,28 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Per_min_Energy = Per_Second_change * 60 * time_res
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
             
+            if (Inside_Temp_Heating + Inside_Temp) > Desired_Temp:
+                Per_min_Energy = (Desired_Temp - Inside_Temp) * Density_Air * Room_Volume * SHC_Air
+                Per_Second_change = Per_min_Energy / (60 * time_res)
+                Heating = Per_Second_change + Energy_Loss
+                HeatPump_Power = (Energy_Loss + Per_Second_change)/CoP
+                test = 2.3
+                Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
+            else:
+                Heating = HeatPump_Power * CoP 
+                test = 2.4
+                if CoP < 0.001:
+                    CoP = 1
+                    Heating = HeatPump_Power * CoP 
+            
             WaterUse = Water.iloc[Tempno, 0]
             TotalHeatedWater = TotalHeatedWater - int(WaterUse)
+            EnergyForWAter = 0
+            HeatPump_PowerTot = HeatPump_Power  
         
             DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot = DataPlot.append({'Power': HeatPump_Power,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'Power': HeatPump_Power}, ignore_index=True)
+            DataPlot = DataPlot.append({'Power': EnergyForWAter,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
+            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'HeatPump_Power': HeatPump_Power,'Total_Power':HeatPump_PowerTot, 'Water_Power': EnergyForWAter}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -281,16 +304,17 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
 
-            SmallCorrection = 0.95
             CoP = 1 / (1 - (Outside_Temp / Inside_Temp)) 
             if CoP > 3:
                 CoP = 3
             if CoP < 0:
                 CoP = 0  
-            Heating = HeatPump_Rated * CoP * SmallCorrection
+            Heating = HeatPump_Rated * CoP 
        
-            Heating = Energy_Loss * SmallCorrection
+            Heating = Energy_Loss 
             HeatPump_Power = Energy_Loss / CoP  
+            if Outside_Temp > Inside_Temp:
+                HeatPump_Power = 0
             test = 1.14
             
             WaterUse = Water.iloc[Tempno, 0]
@@ -303,11 +327,12 @@ def mainASHP(arrival_time, departure_time, time_resolution):
                 if HeatedWater > WaterCapacity:
                     HeatedWater = WaterCapacity
                     EnergyForWAter = WaterCapacity * SHC_Water * (ShowerTemp - Outside_Temp) / (60*time_res)
-                    HeatPump_Power = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
                     test = 1.1
                 else:
                     EnergyForWAter = HeatPump_Rated - HeatPump_Power
-                    HeatPump_Power = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                    
                     
                 TotalHeatedWater = TotalHeatedWater + HeatedWater   
            
@@ -325,8 +350,8 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             
             
             DataASHP = DataASHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot = DataPlot.append({'Power': HeatPump_Power,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'Power': HeatPump_Power}, ignore_index=True)
+            DataPlot = DataPlot.append({'Power': EnergyForWAter,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
+            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'HeatPump_Power': HeatPump_Power,'Total_Power':HeatPump_PowerTot, 'Water_Power': EnergyForWAter}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -339,12 +364,12 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     DataPlot.index = MaskedOutsideTemp.index
     DataPlot1.index = MaskedOutsideTemp.index
     
-    #DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    #DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    #plt.legend(loc='upper right')
+    DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
+    DataPlot1.plot(secondary_y=['Total_Power','HeatPump_Power','Water_Power'] ).legend(loc='lower left')
+    plt.legend(loc='upper right')
     
-    #TotalPower = Power_df1.sum()
-    #print(TotalPower)
+    TotalPower = Power_df1.sum()
+    print(TotalPower)
     
     return Power_df1
 
@@ -354,6 +379,8 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     
     global Power_df2
     global DataGSHP
+    global DataPlot1
+
         
     ## Room Specs ##
     Wall_Height = 2.4;
@@ -363,12 +390,12 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     Door_Area = 2;
     No_Doors = 3;    
 
-    time_res = 15
+    time_res = 5
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
-    MaskedOutsideTempair = OutsideTempData[arrival_time: departure_time].copy()
-    MaskedOutsideTemp = MaskedOutsideTempair + 1
+    MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
+    MaskedOutsideTemp = MaskedOutsideTemp + 1
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
     Inside_Temp = 15
@@ -439,12 +466,28 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
             Per_min_Energy = Per_Second_change * 60 * time_res
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
             
+            if (Inside_Temp_Heating + Inside_Temp) > Desired_Temp:
+                Per_min_Energy = (Desired_Temp - Inside_Temp) * Density_Air * Room_Volume * SHC_Air
+                Per_Second_change = Per_min_Energy / (60 * time_res)
+                Heating = Per_Second_change + Energy_Loss
+                HeatPump_Power = (Energy_Loss + Per_Second_change)/CoP
+                test = 2.3
+                Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
+            else:
+                Heating = HeatPump_Power * CoP 
+                test = 2.4
+                if CoP < 0.001:
+                    CoP = 1
+                    Heating = HeatPump_Power * CoP 
+             
             WaterUse = Water.iloc[Tempno, 0]
             TotalHeatedWater = TotalHeatedWater - int(WaterUse)
+            EnergyForWAter = 0
+            HeatPump_PowerTot = HeatPump_Power
         
             DataGSHP = DataGSHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot = DataPlot.append({'Power': HeatPump_Power,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'Power': HeatPump_Power}, ignore_index=True)
+            DataPlot = DataPlot.append({'Power': EnergyForWAter,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
+            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'HeatPump_Power': HeatPump_Power,'Total_Power':HeatPump_PowerTot, 'Water_Power': EnergyForWAter}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -465,16 +508,17 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
 
-            SmallCorrection = 0.95
             CoP = 1 / (1 - (Outside_Temp / Inside_Temp)) 
             if CoP > 3:
                 CoP = 3
             if CoP < 0:
                 CoP = 0  
-            Heating = HeatPump_Rated * CoP * SmallCorrection
+            Heating = HeatPump_Rated * CoP 
        
-            Heating = Energy_Loss * SmallCorrection
+            Heating = Energy_Loss 
             HeatPump_Power = Energy_Loss / CoP  
+            if Outside_Temp > Inside_Temp:
+                HeatPump_Power = 0
             test = 1.14
             
             WaterUse = Water.iloc[Tempno, 0]
@@ -487,11 +531,12 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
                 if HeatedWater > WaterCapacity:
                     HeatedWater = WaterCapacity
                     EnergyForWAter = WaterCapacity * SHC_Water * (ShowerTemp - Outside_Temp) / (60*time_res)
-                    HeatPump_Power = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
                     test = 1.1
                 else:
                     EnergyForWAter = HeatPump_Rated - HeatPump_Power
-                    HeatPump_Power = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                    
                     
                 TotalHeatedWater = TotalHeatedWater + HeatedWater   
            
@@ -509,8 +554,8 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
             
             
             DataGSHP = DataGSHP.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': HeatPump_Power,'Heating':Heating, 'EnergyLoss': Energy_Loss, 'Increasetemp':Inside_Temp_Heating,'CoP':CoP,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot = DataPlot.append({'Power': HeatPump_Power,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
-            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'Power': HeatPump_Power}, ignore_index=True)
+            DataPlot = DataPlot.append({'Power': EnergyForWAter,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
+            DataPlot1 = DataPlot1.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'HeatPump_Power': HeatPump_Power,'Total_Power':HeatPump_PowerTot, 'Water_Power': EnergyForWAter}, ignore_index=True)
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
@@ -524,11 +569,11 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     DataPlot1.index = MaskedOutsideTemp.index
     
     #DataPlot.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    #DataPlot1.plot(secondary_y=['Power'] ).legend(loc='lower left')
-    #plt.legend(loc='upper right')
+    DataPlot1.plot(secondary_y=['Total_Power','HeatPump_Power','Water_Power'] ).legend(loc='lower left')
+    plt.legend(loc='upper right')
     
-    #TotalPower = Power_df2.sum()
-    #print(TotalPower)
+    TotalPower = Power_df2.sum()
+    print(TotalPower)
     
     return Power_df2
 
