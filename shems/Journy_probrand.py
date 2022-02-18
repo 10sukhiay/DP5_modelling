@@ -13,15 +13,17 @@ import Inputs_Journey_v2 as inp
 # import matplotlib as plt
 
 def main():
-    results_journey()
-    charge_time = time_charge()
-    # print(charge_time)
-    # display_results()
-    return charge_time
+    final_charge_percent = final_charge(inp, shift_charge, charge_add)
+    print(final_charge_percent, "% of total capacity required to charge")
+    final_charge_kWh = (final_charge_percent / 100) * inp.capacity[1]
+    print("This is equivalent to", final_charge_kWh, "kWh")
+    charge_time = final_charge_kWh / inp.charge_rate
+    print("Therefore", charge_time, "hours are needed to charge to requirement")
+    return final_charge_percent, final_charge_kWh, charge_time
 
 # Defines the relationship between ambient temperature and range
 """Ambient temperature selection can be made in the Inputs_Journey file """
-def temp():
+def temp(inp):
     temp = inp.temp # This can be read from the input excel file eventually
     if temp < 23:
         temp_effect = (1-((23-temp) * 0.0033))
@@ -30,21 +32,21 @@ def temp():
     return temp_effect
 
 # Defines the inital estimated amount of charge required for the selected EV type to move 1km
-def charge_p_range():
+def charge_p_range(inp):
     charge_per_range = float(inp.capacity[0]) / float(inp.v_range[0])
     return charge_per_range
 
 # Calculates the intial charge requirement to complete the specified journey input
-def init_charge():
+def init_charge(inp, charge_p_range):
     trip_distance = inp.distance
-    charge_per_range = charge_p_range()
+    charge_per_range = charge_p_range(inp)
     capacity = inp.capacity[0]
     init_charge_req = ((charge_per_range * trip_distance)/ capacity) * 100
     return init_charge_req
 
 # Calculates the new charge requirement after the influence of external variables has been considered
-def shift_charge():
-    temp_effect = temp()
+def shift_charge(inp, init_charge):
+    temp_effect = temp(inp)
     range_shift = (temp_effect * inp.rain[1] * inp.heating[0] * inp.cooling[0] * inp.style[0] * inp.regen[1])
     # print(inp.rain[1])
     # print(inp.heating[0])
@@ -52,13 +54,13 @@ def shift_charge():
     # print(inp.style[0])
     # print(inp.regen[1])
     apply_r_shift = (1/range_shift)
-    init_charge_req = init_charge()
+    init_charge_req = init_charge(inp, charge_p_range)
     shift_charge_req = init_charge_req * apply_r_shift
     return shift_charge_req
 
 # Calculates the additional energy required to complete a journey based on elevation change
 """Changes in elevation over journey covered selection can be made in the Inputs_Journey file """
-def charge_add():
+def charge_add(inp):
     delta_h = inp.dist_up - inp.dist_down # This can be read from the input excel file eventually
     capacity = inp.capacity[0]
     mass = inp.mass[0]
@@ -71,28 +73,11 @@ def charge_add():
     return add_charge
 
 # Calculates the final charge requirement (as a %) with the additional elevation
-def final_charge():
-    shift_charge_req = shift_charge()
-    add_charge = charge_add()
+def final_charge(inp, shift_charge, charge_add):
+    shift_charge_req = shift_charge(inp, init_charge)
+    add_charge = charge_add(inp)
     charge_final = shift_charge_req + add_charge
     return charge_final
-
-def time_charge():
-    final_charge_percent = final_charge()
-    final_charge_kWh = (final_charge_percent / 100) * inp.capacity[1]
-    charge_time = final_charge_kWh / inp.charge_rate
-    return charge_time
-
-def results_journey():
-    final_charge_percent = final_charge()
-    print(final_charge_percent, "% of total capacity required to charge")
-    final_charge_kWh = (final_charge_percent / 100) * inp.capacity[1]
-    print("This is equivalent to", final_charge_kWh, "kWh")
-    charge_time = final_charge_kWh / inp.charge_rate
-    print("Therefore", charge_time, "hours are needed to charge to requirement")
-    return
-
-# def display_results():
 
 if __name__ == "__main__":
     main()
