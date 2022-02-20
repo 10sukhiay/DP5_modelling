@@ -326,6 +326,7 @@ def main(inputs, row):
     gas_efficiency = inputs['Gas Efficiency']
     smart_home = inputs['Smart Home']
     case = inputs['Case']
+    cost_of_change = inputs['Cost of Change']
 
     tic = time.time()
 
@@ -348,7 +349,7 @@ def main(inputs, row):
     calculate_running_cost(v2h_charge_schedule)
     toc = time.time()
 
-    results = [case,
+    results = [case, cost_of_change,
                vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
                v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
                v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
