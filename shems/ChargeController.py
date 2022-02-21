@@ -234,17 +234,20 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
 def initialise_charge_schedule(appliance_forecast, heating_type):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
-    # carbon_intensity = pd.read_csv('../Inputs/' + 'CombinedCO2.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    carbon_intensity = pd.read_csv('../Inputs/' + 'CombinedCO2.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
 
     agile_extract.index = agile_extract.index.tz_localize(None)
-    # carbon_intensity.index = agile_extract.index.tz_localize(None)
+    carbon_intensity.index = carbon_intensity.index.tz_localize(None)
     agile_extract_exp.index = agile_extract_exp.index.tz_localize(None)
+
+    # carbon_extract = carbon_intensity[arrival_time.replace(year=2021): departure_time.replace(year=2021)].copy()
 
     connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
     connection_extract.loc[connection_extract.index.max(), 'Price'] = kWh_export_fee / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
+    connection_extract['Carbon intensity'] = carbon_intensity[arrival_time.replace(year=2021): departure_time.replace(year=2021)].values
     connection_extract['Charge_In_Interval'] = 0
     connection_extract.loc[connection_extract.index.min(), 'SoC'] = plug_in_SoC
 
