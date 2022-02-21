@@ -68,9 +68,10 @@ def pcs(TBM_results):
     PCS_payback = datum_values - all_values
     test2 = 1 / PCS_payback
     test3 = test2.mul(test, axis=0)
+    test3.rename({'VRG Cost': 'VRG Payback', 'V1G Cost': 'V1G Payback', 'V2G Cost': 'V2G Payback', 'VRH Cost': 'VRH Payback'}, axis=1, inplace=True)
     # test4 = test.div(PCS_payback, axis=0)
 
-    PCS_results = pd.concat([PCS_returns, test3], axis=1)
+    PCS_results = pd.concat([PCS_returns, test3.iloc[:, :-2]], axis=1)
 
     PCS_results.to_csv('../Results/PCSResults.csv')
 
