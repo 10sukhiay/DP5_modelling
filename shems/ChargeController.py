@@ -7,34 +7,42 @@ import IntergratedHeating as Heat
 import time
 import csv
 
-def vrg(charge_schedule, mode):
+def vrg(charge_schedule, battery_mode):
     """Populates charge schedule such that the vrg charging is done all upon connection"""
-    if mode == 'EV':
+    if battery_mode == 'EV':
         charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration, 'Charge_In_Interval'] = 1
     return charge_schedule
 
 
-def vrg_max(charge_schedule, mode):
+def vrg_max(charge_schedule, battery_mode):
     """Populates charge schedule such that the vrg and v1g charging is done all upon connection"""
-    if mode == 'EV':
+    if battery_mode == 'EV':
         charge_schedule.loc[: charge_schedule.index.min() + vrg_charge_duration + v1g_charge_duration, 'Charge_In_Interval'] = 1
     return charge_schedule
 
 
-def v1g(charge_schedule, mode):
+def v1g(charge_schedule, battery_mode, motivation):  # ADD CO2 motivation
     """Populates charge schedule with charge commands at intervals at which the virtual cost is lowest"""
     virtual_cost(charge_schedule, 'v1g')  # calculate virtual cost of charging in
+    virtual_carbon_cost(charge_schedule, 'v1g')
 
-    if mode == 'EV':
-        while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration:
+    if battery_mode == 'EV':
+        if motivation == 'Price':
+            while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration:
 
-            working_charge_schedule = charge_schedule[charge_schedule['Charge_In_Interval'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
-            charge_schedule.loc[working_charge_schedule['Virtual_Cost'].idxmin(), 'Charge_In_Interval'] = 1  # select cheapest available interval to charge
-        calculate_soc(charge_schedule)  # update SoC after last charge command added
+                working_charge_schedule = charge_schedule[charge_schedule['Charge_In_Interval'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
+                charge_schedule.loc[working_charge_schedule['Virtual_Cost'].idxmin(), 'Charge_In_Interval'] = 1  # select cheapest available interval to charge
+            calculate_soc(charge_schedule)  # update SoC after last charge command added
+        elif motivation == 'Carbon':
+            while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration:
+
+                working_charge_schedule = charge_schedule[charge_schedule['Charge_In_Interval'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
+                charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Cost'].idxmin(), 'Charge_In_Interval'] = 1  # select cheapest available interval to charge
+            calculate_soc(charge_schedule)  # update SoC after last charge command added
     return charge_schedule
 
 
-def v2(charge_schedule, mode):
+def v2(charge_schedule, battery_mode, motivation):
     """Populates charge schedule with charge and discharge commands, at intervals which result in a net profit. Works
     by selecting the maximum price interval for discharging, calculating the virtual net profit for charging (to
     enable discharging) in all other intervals, and adding charge/discharge interval pairs if profitable. Also
@@ -48,35 +56,69 @@ def v2(charge_schedule, mode):
 
         working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1, :]
 
-        if mode == 'g':
+        if battery_mode == 'g':
             discharge_mask_mode = 'v2g'
             discharge_time = working_charge_schedule['Price'].idxmax()  # virtual revenue directly proportional to interval price
             test = 1
-        elif mode == 'h':
+        elif battery_mode == 'h':
             discharge_mask_mode = 'v2h'
             discharge_time = working_charge_schedule['Home_Power'].idxmax()
             test = charge_schedule.loc[discharge_time, 'Home_Power'] / charge_rate
 
         charge_schedule, working_charge_schedule = discharge_mask(charge_schedule, working_charge_schedule, discharge_time, discharge_mask_mode)
 
-        if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
-            add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, test)  # update schedule to charge and discharge at intervals
-            calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
-            if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < battery_v2g_floor or \
-                    charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
-                add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, -test)  # update schedule to NOT charge and discharge at intervals
-                charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
-                charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
+        if motivation == 'Price':
+            if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
+                add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
+                                          test)  # update schedule to charge and discharge at intervals
+                calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
+                if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
+                   'SoC'].min() < battery_v2g_floor or \
+                        charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
+                        'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
+                    add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
+                                              -test)  # update schedule to NOT charge and discharge at intervals
+                    charge_schedule.loc[
+                        discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
+                    charge_schedule.loc[working_charge_schedule[
+                                            'Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
+        elif motivation == 'Carbon':
+            if working_charge_schedule['Virtual_Carbon_Net'].min() < 0:  # if profitable
+                add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
+                                          test)  # update schedule to charge and discharge at intervals
+                calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
+                if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
+                   'SoC'].min() < battery_v2g_floor or \
+                        charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
+                        'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
+                    add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
+                                              -test)  # update schedule to NOT charge and discharge at intervals
+                    charge_schedule.loc[
+                        discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
+                    charge_schedule.loc[working_charge_schedule[
+                                            'Virtual_Carbon_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
+
+        # charge_schedule, working_charge_schedule = discharge_mask(charge_schedule, working_charge_schedule, discharge_time, battery_mode)
+
+        # if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
+        #     add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, test)  # update schedule to charge and discharge at intervals
+        #     calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
+        #     if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].min() < battery_v2g_floor or \
+        #             charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:, 'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
+        #         add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, -test)  # update schedule to NOT charge and discharge at intervals
+        #         charge_schedule.loc[discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
+        #         charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] = 1  # charge interval checked, to be left uncharged
 
     return charge_schedule
 
 
-def discharge_mask(charge_schedule, working_charge_schedule, discharge_time, mode):
+def discharge_mask(charge_schedule, working_charge_schedule, discharge_time, battery_mode):
     # Mask system used as .loc difficult to use in this application: ideally would put working_charge_schedule in place of discharge_time_mask
     discharge_time_mask = charge_schedule.index.to_series().isin(working_charge_schedule.index.to_series().values)
     charge_schedule.loc[discharge_time_mask, 'Discharge_Time'] = discharge_time  # records the time at which the charge added during a charging interval will be discharged. Necessary to calculate the lifetime battery ageing cost
     charge_schedule.loc[discharge_time, 'Checked'] = 1  # most discharge intervals work before SoC check
-    virtual_cost(charge_schedule, mode)  # calculate virtual net profit for all available intervals charging to discharge in the discharge interval. V2G argument indicates to calculate discharge revenue
+    virtual_cost(charge_schedule, battery_mode)  # calculate virtual net profit for all available intervals charging to discharge in the discharge interval. V2G argument indicates to calculate discharge revenue
+    virtual_carbon_cost(charge_schedule, battery_mode)  # IDK if this works
     working_charge_schedule = charge_schedule[charge_schedule['Checked'] == 0].iloc[:-1,:]  # reduce charge schedule to intervals available
     return charge_schedule, working_charge_schedule
 
@@ -95,6 +137,22 @@ def calculate_running_cost(charge_schedule):
     cumsum_cost = change_in_total_cost.cumsum()  # cumulatively sum cost and revenue from each interval
     charge_schedule['Running_Cost'] = 0  # initialise column
     charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['Running_Cost'])] = cumsum_cost[:-1]  # offset to calculate payment after charging occurred
+
+
+def calculate_running_carbon(charge_schedule):
+    """Split charge indication column into boolean columns, to enable cumulative summation of charging cost and
+    discharging revenue through the connection period separately."""
+
+    kW_to_kWh = time_resolution / pd.Timedelta('60 min')
+    battery_discharge = charge_schedule['Charge_In_Interval'].values < 0
+    battery_charge = charge_schedule['Charge_In_Interval'].values > 0
+    home_by_grid = (charge_schedule['Charge_In_Interval'].values == 0) + battery_charge
+
+    change_in_home_cost = home_by_grid * kW_to_kWh * (charge_schedule['Home_Power'] - charge_schedule['Solar_Power']) * charge_schedule['Carbon Intensity']
+    change_in_total_cost = battery_charge * charge_schedule['Virtual_Carbon_Cost'] - battery_discharge * charge_schedule['Virtual_Carbon_Revenue'] + change_in_home_cost
+    cumsum_cost = change_in_total_cost.cumsum()  # cumulatively sum cost and revenue from each interval
+    charge_schedule['Running_Carbon_Cost'] = 0  # initialise column
+    charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['Running_Carbon_Cost'])] = cumsum_cost[:-1]  # offset to calculate payment after charging occurred
 
 
 def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value):
@@ -179,6 +237,73 @@ def virtual_cost(charge_schedule, charger_type):
     return charge_schedule
 
 
+def virtual_carbon_cost(charge_schedule, charger_type):
+    """Calculates the virtual cost and revenue of charger action, depending on the logic used. Factors accounted for
+    include:
+        - Wholesale electricity price
+        - Cycle battery ageing (cost of battery wear due to charging and discharging)
+        - Lifetime battery ageing (cost of battery wear due to holding charge further from 0.15 SoC for longer periods)
+        - Charger efficiency (cost of energy lost buying and selling from the grid)
+        - Maker taker fee (difference between wholesale electricity price when buying vs selling)
+
+    Factors unaccounted for include:
+        - Temperature battery ageing (cost of battery wear due to temperature unquantified)
+        - Charge rate battery ageing (cost of battery wear due to charge rate variance found to be minimal
+        and therefore is omitted)
+
+    Factors TO BE ADDED: - Home generation revenue (home generation used rather than sold saves the maker taker cost)
+    - Home demand cost savings reduce the maker taker fee from V2G discharge by the ratio of the demand power vs the
+    controller charge rate. N.b. only a power shower could exceed the rating
+    """
+    kWh_resolution = charge_rate * time_resolution / pd.Timedelta('60 min')  # change in charge (kWh) after an interval of charging
+    discharge_home_frac = 1
+
+    calculate_soc(charge_schedule)  # calculate SoC profile to enable lifetime battery ageing calcs
+    soc_from_15 = charge_schedule['SoC'] / 3 + 0.30  # linear formula derived from empirical study, to enable lifetime battery ageing calcs
+
+
+    if charger_type == 'v1g':
+        charge_schedule['Discharge_Time'] = charge_schedule.index.max()  # charge held for v1g until disconnection. IDEA: could add discharge gradient representative of journey
+        charge_schedule['Virtual_Carbon_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
+
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
+                departure_time - arrival_time)
+        cycle_cost_fraction = battery_carbon_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
+        battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
+        charge_schedule['Virtual_Carbon_Cost'] = charge_schedule['Carbon Intensity'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
+
+
+    elif charger_type == 'v2g':
+
+        kWh_discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Carbon Intensity'].values
+        home_consumption_kW = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Home_Power'].values
+        export_kW = charge_rate - home_consumption_kW
+        charge_schedule['Virtual_Carbon_Revenue'] = (kWh_discharge_price * home_consumption_kW + (kWh_discharge_price - kWh_export_fee) * export_kW) * time_resolution / pd.Timedelta('60 min') * charger_efficiency
+
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
+        cycle_cost_fraction = battery_carbon_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
+        battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor / (1 - soc_from_15 * charge_held_fraction)
+        charge_schedule['Virtual_Carbon_Cost'] = charge_schedule['Carbon Intensity'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
+        charge_schedule['Adjusted_Carbon_Intensity'] = charge_schedule['Carbon Intensity'] * (charge_rate - charge_schedule['Solar_Power'])/charge_rate
+
+    elif charger_type == 'v2h':
+
+        kWh_discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Carbon Intensity'].values  # .values * charger_efficiency
+        home_consumption_kW = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Home_Power'].values
+        keep_revenue_mask = (charge_schedule['Charge_In_Interval'].values == -1) + (charge_schedule['Charge_In_Interval'].values == 1)
+        update_revenue_mask = ~keep_revenue_mask
+        charge_schedule['Virtual_Carbon_Revenue'] = update_revenue_mask * kWh_discharge_price * home_consumption_kW * time_resolution / pd.Timedelta('60 min') * charger_efficiency + charge_schedule['Virtual_Carbon_Revenue'] * keep_revenue_mask
+
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
+        cycle_cost_fraction = battery_carbon_per_kWh * home_consumption_kW * time_resolution / pd.Timedelta('60 min') / max_battery_cycles  # cost of battery wear due to charging and discharging
+        battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor/ (1 - soc_from_15 * charge_held_fraction)
+        charge_schedule['Virtual_Carbon_Cost'] = update_revenue_mask * (charge_schedule['Carbon Intensity'] * (home_consumption_kW - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost) + charge_schedule['Virtual_Carbon_Cost'] * keep_revenue_mask
+
+    charge_schedule['Virtual_Carbon_Net'] = charge_schedule['Virtual_Carbon_Cost'] - charge_schedule['Virtual_Carbon_Revenue']
+
+    return charge_schedule
+
+
 def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, case, row):
     """Plot DP4 equivalent figures"""
 
@@ -196,6 +321,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.subplot(412)
     plt.plot(charge_schedule_vrg['Price'], label='Price')
     plt.plot(charge_schedule_v2g['Adjusted_Price'], label='Adjusted Price')
+    plt.plot(charge_schedule_v2g['Carbon Intensity'], label='Adjusted Price')
     # plt.plot(charge_schedule_v2g['Virtual_Cost'], label='v2h cost')
     # plt.plot(charge_schedule_v2g['Virtual_Revenue'], label='v2h rev')
     # plt.plot(charge_schedule_v2g['Virtual_Net'], label='v2h net')
@@ -247,7 +373,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
     connection_extract.loc[connection_extract.index.max(), 'Price'] = kWh_export_fee / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
-    connection_extract['Carbon intensity'] = carbon_intensity[arrival_time.replace(year=2021): departure_time.replace(year=2021)].values
+    connection_extract['Carbon Intensity'] = carbon_intensity[arrival_time.replace(year=2021): departure_time.replace(year=2021)].values
     connection_extract['Charge_In_Interval'] = 0
     connection_extract.loc[connection_extract.index.min(), 'SoC'] = plug_in_SoC
 
@@ -308,6 +434,8 @@ def main(inputs, row):
     global gas_efficiency
     global smart_home
     global case
+    global battery_carbon_per_kWh
+    global motivation
 
     charge_rate = inputs['Charge Rate']  # kW
     battery_capacity = inputs['Battery Capacity']  # kWh
@@ -334,6 +462,8 @@ def main(inputs, row):
     smart_home = inputs['Smart Home']
     case = inputs['Case']
     cost_of_change = inputs['Cost of Change']
+    battery_carbon_per_kWh = inputs['Battery Carbon per kWh']
+    motivation = inputs['Battery Motivation']
 
     tic = time.time()
 
@@ -345,9 +475,9 @@ def main(inputs, row):
 
     vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
     vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
-    v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode)
-    v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g')
-    v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h')
+    v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode, motivation)
+    v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g', motivation)
+    v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h', motivation)
     # v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
 
     calculate_running_cost(vrg_charge_schedule_max)
