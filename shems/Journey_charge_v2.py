@@ -121,6 +121,13 @@ def joruney_savings():
     trip_savings = round(((journey_petrol_price - trip_cost) / 100), 2)
     return trip_savings
 
+def petrol_cost():
+    petrol_consump_rate = inp.l_per_km # in litres per km
+    petrol_cost = inp.p_per_litre
+    petrol_p_per_km = petrol_consump_rate * petrol_cost
+    journey_petrol_price = inp.distance * petrol_p_per_km
+    return journey_petrol_price
+
 # def display_results():
 # TO COMPLETE LATER- USE WHEN DISPLAYING RESULTS FOR INDIVIDUAL SECTION
 
