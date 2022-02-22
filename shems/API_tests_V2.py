@@ -22,6 +22,10 @@ url = ('https://maps.googleapis.com/maps/api/distancematrix/json'
        + '&key={}'
        ).format(origin, destination, API_KEY)
 
+# base url
+# url = "https://maps.googleapis.com/maps/api/distancematrix/json?units=imperial&"
+# r = requests.get(url + "origins=" + journey_start + "&destinations=" + journey_end + "&key" + API_KEY)
+
 # get response
 response = urllib.request.urlopen(url)
 response_json = json.loads(response.read())
