@@ -16,7 +16,7 @@ def main():
     results_journey()
     charge_time = time_charge()
     # print(charge_time)
-    # display_results()
+    # display_results() # this is added after display_results() has been formed
     return charge_time
 
 # Defines the relationship between ambient temperature and range
@@ -77,22 +77,52 @@ def final_charge():
     charge_final = shift_charge_req + add_charge
     return charge_final
 
-def time_charge():
+def final_kwh():
     final_charge_percent = final_charge()
     final_charge_kWh = (final_charge_percent / 100) * inp.capacity[1]
+    return final_charge_kWh
+
+def time_charge():
+    final_charge_kWh = final_kwh()
     charge_time = final_charge_kWh / inp.charge_rate
     return charge_time
 
 def results_journey():
-    final_charge_percent = final_charge()
+    final_charge_percent = round(final_charge(), 2)
     print(final_charge_percent, "% of total capacity required to charge")
-    final_charge_kWh = (final_charge_percent / 100) * inp.capacity[1]
+    final_charge_kWh = round((final_charge_percent / 100) * inp.capacity[1], 2)
     print("This is equivalent to", final_charge_kWh, "kWh")
-    charge_time = final_charge_kWh / inp.charge_rate
-    print("Therefore", charge_time, "hours are needed to charge to requirement")
+    charge_time = round(final_charge_kWh / inp.charge_rate, 2)
+    print("Therefore",charge_time, "hours are needed to charge to requirement using a", inp.charge_rate, "kW charger")
+    pounds_saved = joruney_savings()
+    print('£', pounds_saved, 'on this journey saved with this EV selection')
     return
 
+def journey_cost():
+    journey_price = 0
+    vehicle_select = inp.vehicle_type
+    petrol_cost = inp.p_per_litre
+    petrol_consump_rate = inp.l_per_km
+    elec_cost = inp.kwh_cost
+    if vehicle_select == 1 or vehicle_select == 2:
+        final_charge_kWh = final_kwh()
+        journey_price = final_charge_kWh * elec_cost
+    elif vehicle_select == 3:
+        petrol_p_per_km = petrol_consump_rate * petrol_cost
+        journey_price = inp.distance * petrol_p_per_km
+    return journey_price
+
+def joruney_savings():
+    petrol_consump_rate = inp.l_per_km
+    petrol_cost = inp.p_per_litre
+    trip_cost = journey_cost()
+    petrol_p_per_km = petrol_consump_rate * petrol_cost
+    journey_petrol_price = inp.distance * petrol_p_per_km
+    trip_savings = round(((journey_petrol_price - trip_cost) / 100), 2)
+    return trip_savings
+
 # def display_results():
+# TO COMPLETE LATER- USE WHEN DISPLAYING RESULTS FOR INDIVIDUAL SECTION
 
 if __name__ == "__main__":
     main()

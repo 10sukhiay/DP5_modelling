@@ -7,7 +7,7 @@ import numpy as np
 def main(arrival_time, departure_time):
     # arrival_time = pd.to_datetime('2019-02-23 19:15:00')
     # departure_time = pd.to_datetime('2019-02-27 7:00:00')
-    app_data = 'Inputs\Typical_home_demand.xls'
+    app_data = 'Inputs/typical_home_demand.xls'
     app_demand = pd.read_excel(os.getcwd()[:-5] + app_data)
     time_resolution = pd.Timedelta(app_demand['Duration (h)'].min(), 'h')
     # app_demand_series = pd.date_range(arrival_time, departure_time, freq=time_resolution)

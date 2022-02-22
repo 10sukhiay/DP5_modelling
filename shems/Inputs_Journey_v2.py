@@ -19,8 +19,8 @@ journey_end = "Bristol, UK, BS1 2NJ"
 # def define_jounrey():
 #     API_KEY = 'AIzaSyC08mMBGKbKzHBZ2FX7JmUsv3Kh9KPkIPg'
 #     map_client = googlemaps.Client(API_KEY)
-#     journey_start = "Bristol, UK, BS8 2AB"
-#     journey_end = "Bristol, UK, BS1 2NJ"
+#     journey_start = "Bristol, UK, BS8 2AB" # This should be read from input file
+#     journey_end = "Bristol, UK, BS1 2NJ" # This should be read from input file
 #     return API_KEY, map_client, journey_start, journey_end
 
 
@@ -31,7 +31,12 @@ journey_end = "Bristol, UK, BS1 2NJ"
 # print(Journey)
 
 distance = 130
+# Elevation change
+dist_up = 150
+dist_down = 50
+
 charge_rate = 7.4  # kW [THIS IS AN EXAMPLE- VALUE SHOULD BE PROVIDED BY ADAM'S CODE]
+
 
 # Temperature
 temp = 9  # celcius
@@ -41,16 +46,22 @@ temp = 9  # celcius
 # r_v1 = 355 # km
 # c_v1 = 55 # kWh
 # m_v1 = 1684 # kg
+# price_pu1 = 42,990
 
 # # Vehicle 2 - Nissan Leaf
 # r_v2 = 240 # km
 # c_v2 = 40 # kWh
 # m_v2 = 1580 # kg
+# price_pu2 =
 
 # Vehicle Characteristics
 v_range = [355, 240]  # km
 capacity = [55, 40]  # kWh
 mass = [1684, 1580]  # kg
+
+# Vehicle Type
+"""Vehicle type selection; where Tesla Model 3 = 1, Nissan Leaf = 2, ICE = 3"""
+vehicle_type = 1
 
 # Precipitation
 """Rain severity increases: none, light, mild, heavy; index in Journey_charge_v2 as 0, 1, 2, 3"""
@@ -85,6 +96,9 @@ regen = [1.28, 1]
 # regen_on = 1.28
 # regen_off = 1
 
-# Elevation change
-dist_up = 150
-dist_down = 50
+#fuel cost
+MPG_fiesta = 46.8
+p_per_litre = 143 # defines price of petrol per litre (in pence)
+l_per_km = (2.35215/ MPG_fiesta) # defines how many litres are required per km of travel- conversion from MPG
+kwh_cost = 28 # average cost per kwh of electricity to charge the vehicle (provided from adams code)
+

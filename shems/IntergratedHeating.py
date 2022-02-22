@@ -24,7 +24,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
     time_res = 15
     Tempno = 0
     
-    OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
+    OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
@@ -190,7 +190,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     time_res = 5
     Tempno = 0
     
-    OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
+    OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
@@ -393,7 +393,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     time_res = 5
     Tempno = 0
     
-    OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs\HomeGen\Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
+    OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
     MaskedOutsideTemp = MaskedOutsideTemp + 1
 
@@ -580,7 +580,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
 def mainShower(arrival_time, departure_time,time_resolution):
     global ShowerPower
     
-    app_data = 'Inputs\Typical_home_demand.xls'
+    app_data = 'Inputs/Typical_home_demand.xls'
     app_demand = pd.read_excel(os.getcwd()[:-5] + app_data)
     date_time_index = pd.date_range(arrival_time, departure_time + time_resolution, freq=time_resolution)
     ShowerPower = pd.DataFrame(0, index=date_time_index, columns=['Power'])
