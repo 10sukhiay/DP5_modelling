@@ -37,7 +37,7 @@ def charge_p_range():
 
 # Calculates the intial charge requirement to complete the specified journey input
 def init_charge():
-    trip_distance = inp.distance
+    trip_distance = API.journey_distance()
     charge_per_range = charge_p_range()
     capacity = inp.capacity[0]
     init_charge_req = ((charge_per_range * trip_distance)/ capacity) * 100
@@ -110,7 +110,7 @@ def journey_cost():
         journey_price = final_charge_kWh * elec_cost
     elif vehicle_select == 3:
         petrol_p_per_km = petrol_consump_rate * petrol_cost
-        journey_price = inp.distance * petrol_p_per_km
+        journey_price = API.journey_distance() * petrol_p_per_km
     return journey_price
 
 def joruney_savings():
@@ -118,7 +118,7 @@ def joruney_savings():
     petrol_cost = inp.p_per_litre
     trip_cost = journey_cost()
     petrol_p_per_km = petrol_consump_rate * petrol_cost
-    journey_petrol_price = inp.distance * petrol_p_per_km
+    journey_petrol_price = API.journey_distance() * petrol_p_per_km
     trip_savings = round(((journey_petrol_price - trip_cost) / 100), 2)
     return trip_savings
 
@@ -126,7 +126,7 @@ def petrol_cost():
     petrol_consump_rate = inp.l_per_km # in litres per km
     petrol_cost = inp.p_per_litre
     petrol_p_per_km = petrol_consump_rate * petrol_cost
-    journey_petrol_price = inp.distance * petrol_p_per_km
+    journey_petrol_price = API.journey_distance() * petrol_p_per_km
     return journey_petrol_price
 
 # def display_results():
