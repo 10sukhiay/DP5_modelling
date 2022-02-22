@@ -399,7 +399,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
         # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(arrival_time, departure_time, time_resolution)
         if heating_type == 'Gas':
             connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
-            gas_cost = connection_extract['Heating_Power'] / gas_efficiency * time_resolution / pd.Timedelta('60 min') * gas_price
+            gas_cost = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_price
             total_gas_cost = gas_cost.cumsum()[-1]
         else:
             connection_extract['Home_Power'] = connection_extract['Appliance_Power'] + connection_extract['Heating_Power']  # - connection_extract['Solar_Power']
