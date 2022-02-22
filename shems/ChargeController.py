@@ -70,14 +70,14 @@ def v2(charge_schedule, battery_mode, motivation):
         if motivation == 'Price':
             if working_charge_schedule['Virtual_Net'].min() < 0:  # if profitable
                 add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
-                                          test)  # update schedule to charge and discharge at intervals
+                                          test, motivation)  # update schedule to charge and discharge at intervals
                 calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
                 if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
                    'SoC'].min() < battery_v2g_floor or \
                         charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
                         'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
                     add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
-                                              -test)  # update schedule to NOT charge and discharge at intervals
+                                              -test, motivation)  # update schedule to NOT charge and discharge at intervals
                     charge_schedule.loc[
                         discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
                     charge_schedule.loc[working_charge_schedule[
@@ -85,14 +85,14 @@ def v2(charge_schedule, battery_mode, motivation):
         elif motivation == 'Carbon':
             if working_charge_schedule['Virtual_Carbon_Net'].min() < 0:  # if profitable
                 add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
-                                          test)  # update schedule to charge and discharge at intervals
+                                          test, motivation)  # update schedule to charge and discharge at intervals
                 calculate_soc(charge_schedule)  # test new charge/dischareg pair do not push SoC out of limits
                 if charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
                    'SoC'].min() < battery_v2g_floor or \
                         charge_schedule.loc[charge_schedule.index.min() + vrg_charge_duration:,
                         'SoC'].max() > battery_v2g_ceil:  # try new charge interval with same discharge interval, as SoC limit will be either before or after discharge interval and profitable charge intervals may still exist in the other direction
                     add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time,
-                                              -test)  # update schedule to NOT charge and discharge at intervals
+                                              -test, motivation)  # update schedule to NOT charge and discharge at intervals
                     charge_schedule.loc[
                         discharge_time, 'Checked'] = 0  # discharge interval unchecked, to be tested again
                     charge_schedule.loc[working_charge_schedule[
@@ -155,11 +155,16 @@ def calculate_running_carbon(charge_schedule):
     charge_schedule.iloc[1:, charge_schedule.columns.get_indexer(['Running_Carbon_Cost'])] = cumsum_cost[:-1]  # offset to calculate payment after charging occurred
 
 
-def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value):
+def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharge_time, value, motivation):
     """Minimise repetition in adding/removing charge/discharge interval pairs to charge schedule."""
-    charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] += value
-    charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] += value/value
-    charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= value
+    if motivation == 'Price':
+        charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] += value
+        charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] += value/value
+        charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= value
+    if motivation == 'Carbon':
+        charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Net'].idxmin(), 'Charge_In_Interval'] += value
+        charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Net'].idxmin(), 'Checked'] += value / value
+        charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= value
 
 
 def calculate_soc(charge_schedule):
@@ -309,7 +314,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
     fig = plt.figure(figsize=(20, 15), dpi=100)
 
-    plt.subplot(411)
+    plt.subplot(511)
     plt.plot(charge_schedule_v2h['Charge_In_Interval'] * charge_rate, label='V2H Charging Demand')
     plt.plot(charge_schedule_v2g['Charge_In_Interval'] * charge_rate, label='V2G Charging Demand')
     plt.plot(charge_schedule_v2h['Home_Power'], label='Home Power')
@@ -318,10 +323,10 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.grid()
     plt.legend()
 
-    plt.subplot(412)
+    plt.subplot(512)
     plt.plot(charge_schedule_vrg['Price'], label='Price')
     plt.plot(charge_schedule_v2g['Adjusted_Price'], label='Adjusted Price')
-    plt.plot(charge_schedule_v2g['Carbon Intensity'], label='Adjusted Price')
+    plt.plot(charge_schedule_v2g['Carbon Intensity'], label='Carbon Intensity')  # need to fix axis
     # plt.plot(charge_schedule_v2g['Virtual_Cost'], label='v2h cost')
     # plt.plot(charge_schedule_v2g['Virtual_Revenue'], label='v2h rev')
     # plt.plot(charge_schedule_v2g['Virtual_Net'], label='v2h net')
@@ -329,7 +334,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.grid()
     plt.legend()
 
-    plt.subplot(413)
+    plt.subplot(513)
     plt.plot(charge_schedule_vrg['SoC'], label='vrg SoC')
     plt.plot(charge_schedule_v1g['SoC'], label='v1g SoC')
     plt.plot(charge_schedule_v2g['SoC'], label='v2g SoC')
@@ -337,11 +342,19 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.grid()
     plt.legend()
 
-    plt.subplot(414)
+    plt.subplot(514)
     plt.plot(charge_schedule_vrg['Running_Cost'], label='vrg Running_Cost')
     plt.plot(charge_schedule_v1g['Running_Cost'], label='v1g Running_Cost')
     plt.plot(charge_schedule_v2g['Running_Cost'], label='v2g Running_Cost')
     plt.plot(charge_schedule_v2h['Running_Cost'], label='v2h Running_Cost')
+    plt.grid()
+    plt.legend()
+
+    plt.subplot(515)
+    plt.plot(charge_schedule_vrg['Running_Carbon_Cost'], label='vrg Running_Carbon_Cost')
+    plt.plot(charge_schedule_v1g['Running_Carbon_Cost'], label='v1g Running_Carbon_Cost')
+    plt.plot(charge_schedule_v2g['Running_Carbon_Cost'], label='v2g Running_Carbon_Cost')
+    plt.plot(charge_schedule_v2h['Running_Carbon_Cost'], label='v2h Running_Carbon_Cost')
     plt.grid()
     plt.legend()
 
@@ -474,7 +487,7 @@ def main(inputs, row):
     # plt.show()
 
     vrg_charge_schedule = vrg(zeros_charge_schedule, battery_mode)
-    vrg_charge_schedule_max = virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g')
+    vrg_charge_schedule_max = virtual_carbon_cost(virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g'), 'v1g')
     v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode, motivation)
     v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g', motivation)
     v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h', motivation)
@@ -484,6 +497,11 @@ def main(inputs, row):
     calculate_running_cost(v1g_charge_schedule)
     calculate_running_cost(v2g_charge_schedule)
     calculate_running_cost(v2h_charge_schedule)
+
+    calculate_running_carbon(vrg_charge_schedule_max)
+    calculate_running_carbon(v1g_charge_schedule)
+    calculate_running_carbon(v2g_charge_schedule)
+    calculate_running_carbon(v2h_charge_schedule)
     toc = time.time()
 
     results = [case, cost_of_change,
