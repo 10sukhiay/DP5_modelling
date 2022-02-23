@@ -7,23 +7,30 @@ Feb 2022
 """
 
 # import required packages for use
+import pandas as pd
 import Inputs_Journey_v2 as inp
 import API_tests as API
-# import pandas as pd
+import os
 # import numpy as np
 # import matplotlib as plt
 
-def main():
-    results_journey()
-    charge_time = time_charge()
+# global TempData
+# TempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
+# nearest_time = pd.to_datetime('26-02-2019 07:35:00')
+# temp = TempData.index.get_loc(nearest_time, method='nearest')
+# print(temp)
+
+def main(inputs):
+    results_journey(inputs)
+    charge_time = time_charge(inputs)
     # print(charge_time)
     # display_results() # this is added after display_results() has been formed
     return charge_time
 
 # Defines the relationship between ambient temperature and range
 """Ambient temperature selection can be made in the Inputs_Journey file """
-def temp():
-    temp = inp.temp # This can be read from the input excel file eventually
+def temp(inputs):
+    temp = inputs['Temperature']  # This can be read from the input excel file eventually
     if temp < 23:
         temp_effect = (1-((23-temp) * 0.0033))
     else:
@@ -31,38 +38,38 @@ def temp():
     return temp_effect
 
 # Defines the inital estimated amount of charge required for the selected EV type to move 1km
-def charge_p_range():
-    charge_per_range = float(inp.capacity[0]) / float(inp.v_range[0])
+def charge_p_range(inputs):
+    charge_per_range = float(inputs['Battery Capacity']) / float(inputs['Vehicle Range'])
     return charge_per_range
 
 # Calculates the intial charge requirement to complete the specified journey input
-def init_charge():
-    trip_distance = API.journey_distance()
-    charge_per_range = charge_p_range()
-    capacity = inp.capacity[0]
+def init_charge(inputs):
+    trip_distance = API.journey_distance(inputs)
+    charge_per_range = charge_p_range(inputs)
+    capacity = inputs['Battery Capacity']
     init_charge_req = ((charge_per_range * trip_distance)/ capacity) * 100
     return init_charge_req
 
 # Calculates the new charge requirement after the influence of external variables has been considered
-def shift_charge():
-    temp_effect = temp()
-    range_shift = (temp_effect * inp.rain[1] * inp.heating[0] * inp.cooling[0] * inp.style[0] * inp.regen[1])
+def shift_charge(inputs):
+    temp_effect = temp(inputs)
+    range_shift = (temp_effect * inputs['Rain'] * inputs['Heating'] * inputs['Cooling'] * inputs['Driving Style'] * inputs['Regen Braking'])
     # print(inp.rain[1])
     # print(inp.heating[0])
     # print(inp.cooling[0])
     # print(inp.style[0])
     # print(inp.regen[1])
     apply_r_shift = (1/range_shift)
-    init_charge_req = init_charge()
+    init_charge_req = init_charge(inputs)
     shift_charge_req = init_charge_req * apply_r_shift
     return shift_charge_req
 
 # Calculates the additional energy required to complete a journey based on elevation change
 """Changes in elevation over journey covered selection can be made in the Inputs_Journey file """
-def charge_add():
-    delta_h = inp.dist_up - inp.dist_down # This can be read from the input excel file eventually
-    capacity = inp.capacity[0]
-    mass = inp.mass[0]
+def charge_add(inputs):
+    delta_h = inputs['Distance up'] - inputs['Distance down']  # This can be read from the input excel file eventually
+    capacity = inputs['Battery Capacity']
+    mass = inputs['Vehicle Mass']
     if delta_h > 0:
         energy_J = delta_h * mass * 9.81
         energy_kWh = energy_J / 3600000
@@ -72,61 +79,64 @@ def charge_add():
     return add_charge
 
 # Calculates the final charge requirement (as a %) with the additional elevation
-def final_charge():
-    shift_charge_req = shift_charge()
-    add_charge = charge_add()
+def final_charge(inputs):
+    shift_charge_req = shift_charge(inputs)
+    add_charge = charge_add(inputs)
     charge_final = shift_charge_req + add_charge
     return charge_final
 
-def final_kwh():
-    final_charge_percent = final_charge()
-    final_charge_kWh = (final_charge_percent / 100) * inp.capacity[1]
+def final_kwh(inputs):
+    final_charge_percent = final_charge(inputs)
+    final_charge_kWh = (final_charge_percent / 100) * inputs['Battery Capacity']
     return final_charge_kWh
 
-def time_charge():
-    final_charge_kWh = final_kwh()
-    charge_time = final_charge_kWh / inp.charge_rate
+def time_charge(inputs):
+    final_charge_kWh = final_kwh(inputs)
+    charge_time = final_charge_kWh / inputs['Charge Rate']
     return charge_time
 
-def results_journey():
-    final_charge_percent = round(final_charge(), 2)
+def results_journey(inputs):
+    final_charge_percent = round(final_charge(inputs), 2)
     print(final_charge_percent, "% of total capacity required to charge")
-    final_charge_kWh = round((final_charge_percent / 100) * inp.capacity[1], 2)
+    final_charge_kWh = round((final_charge_percent / 100) * inputs['Battery Capacity'], 2)
     print("This is equivalent to", final_charge_kWh, "kWh")
-    charge_time = round(final_charge_kWh / inp.charge_rate, 2)
-    print("Therefore",charge_time, "hours are needed to charge to requirement using a", inp.charge_rate, "kW charger")
-    pounds_saved = joruney_savings()
+    charge_time = round(final_charge_kWh / inputs['Charge Rate'], 2)
+    print("Therefore", charge_time, "hours are needed to charge to requirement using a", inputs['Charge Rate'], "kW charger")
+    pounds_saved = joruney_savings(inputs)
     print('£', pounds_saved, 'on this journey saved with this EV selection')
     return
 
-def journey_cost():
+def journey_cost(inputs):
     journey_price = 0
-    vehicle_select = inp.vehicle_type
-    petrol_cost = inp.p_per_litre
-    petrol_consump_rate = inp.l_per_km
+    vehicle_select = inputs['Vehicle Type']
+    petrol_cost = inputs['p per litre']
+    l_per_km = (2.35215 / inputs['MPG'])
+    petrol_consump_rate = l_per_km
     elec_cost = inp.kwh_cost
     if vehicle_select == 1 or vehicle_select == 2:
-        final_charge_kWh = final_kwh()
+        final_charge_kWh = final_kwh(inputs)
         journey_price = final_charge_kWh * elec_cost
     elif vehicle_select == 3:
         petrol_p_per_km = petrol_consump_rate * petrol_cost
-        journey_price = API.journey_distance() * petrol_p_per_km
+        journey_price = API.journey_distance(inputs) * petrol_p_per_km
     return journey_price
 
-def joruney_savings():
-    petrol_consump_rate = inp.l_per_km
-    petrol_cost = inp.p_per_litre
-    trip_cost = journey_cost()
+def joruney_savings(inputs):
+    l_per_km = (2.35215 / inputs['MPG'])
+    petrol_consump_rate = l_per_km
+    petrol_cost = inputs['p per litre']
+    trip_cost = journey_cost(inputs)
     petrol_p_per_km = petrol_consump_rate * petrol_cost
-    journey_petrol_price = API.journey_distance() * petrol_p_per_km
+    journey_petrol_price = API.journey_distance(inputs) * petrol_p_per_km
     trip_savings = round(((journey_petrol_price - trip_cost) / 100), 2)
     return trip_savings
 
-def petrol_cost():
-    petrol_consump_rate = inp.l_per_km # in litres per km
-    petrol_cost = inp.p_per_litre
+def petrol_cost(inputs):
+    l_per_km = (2.35215 / inputs['MPG'])
+    petrol_consump_rate = l_per_km # in litres per km
+    petrol_cost = inputs['p per litre']
     petrol_p_per_km = petrol_consump_rate * petrol_cost
-    journey_petrol_price = API.journey_distance() * petrol_p_per_km
+    journey_petrol_price = API.journey_distance(inputs) * petrol_p_per_km
     return journey_petrol_price
 
 # def display_results():

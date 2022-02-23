@@ -12,31 +12,31 @@ Feb 2022
 import requests
 import pandas as pd
 
-def main():
-       response = initialise_api_data()
+def main(inputs):
+       response = initialise_api_data(inputs)
        print(response.text)
-       journey_start = journey_origin()
-       journey_end = journey_destination()
-       time_minutes = journey_time()
+       journey_start = journey_origin(inputs)
+       journey_end = journey_destination(inputs)
+       time_minutes = journey_time(inputs)
        print("Journey from", journey_start, "to", journey_end, "will take", time_minutes, "minutes")
-       ttime_minutes = journey_time_traffic()
-       print("Journey from", journey_start, "to", journey_end, "will take", ttime_minutes, "minutes in traffic")
-       distace_km = journey_distance()
+       ttime_minutes = journey_time_traffic(inputs)
+       print("Journey from", journey_start, "to", journey_end, "will take", ttime_minutes, "in traffic")
+       distace_km = journey_distance(inputs)
        print("Journey from", journey_start, "to", journey_end, "will traverse", distace_km, "km")
        return
 
-def journey_origin():
-       journey_start = "Bristol, UK, BS8 2AB"  # This should be read from the input file
+def journey_origin(inputs):
+       journey_start = inputs['Origin']  # This should be read from the input file
        return journey_start
 
-def journey_destination():
-       journey_end = "Bristol, UK, BS1 2NJ"  # This should be read from the input file
+def journey_destination(inputs):
+       journey_end = inputs['Journey Destination']  # This should be read from the input file
        return journey_end
 
-def initialise_api_data():
+def initialise_api_data(inputs):
        API_KEY = 'AIzaSyCsNLYOColvC8uLS7EeNMRi5nK1kr_KSp8'
-       journey_start = journey_origin()
-       journey_end = journey_destination()
+       journey_start = journey_origin(inputs)
+       journey_end = journey_destination(inputs)
        departure_time = pd.to_datetime('2022-04-29 17:00:00')
        datum_time = pd.to_datetime('1970-01-01 00:00:00')
        one_s = pd.Timedelta("1 s")
@@ -56,20 +56,20 @@ def initialise_api_data():
        # print(response.text)
        return response
 
-def journey_time():
-       response = initialise_api_data()
+def journey_time(inputs):
+       response = initialise_api_data(inputs)
        time_seconds = response.json()["rows"][0]["elements"][0]["duration"]["value"]
        time_minutes = round(time_seconds / 60, 2)
        return time_minutes
 
-def journey_distance():
-       response = initialise_api_data()
+def journey_distance(inputs):
+       response = initialise_api_data(inputs)
        distance_metres = response.json()["rows"][0]["elements"][0]["distance"]["value"]
        distance_km = round(distance_metres / 1000, 2)
        return distance_km
 
-def journey_time_traffic():
-       response = initialise_api_data()
+def journey_time_traffic(inputs):
+       response = initialise_api_data(inputs)
        ttime = pd.Timedelta(str(response.json()["rows"][0]["elements"][0]["duration_in_traffic"]["value"]) + 's')
        # ttime_minutes = round((ttime_seconds / 60), 2)
        return ttime
