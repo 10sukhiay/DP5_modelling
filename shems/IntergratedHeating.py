@@ -34,7 +34,7 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
     Time = 0
     Time_Data = []
 
-    Power_df = pd.DataFrame(columns=['Power'])
+    Power_df = pd.DataFrame()
     DataElec = pd.DataFrame()
     DataPlot = pd.DataFrame()
     DataPlot1 = pd.DataFrame()
@@ -158,7 +158,7 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
         
-    Power_df.index = MaskedOutsideTemp.index
+    # Power_df.index = MaskedOutsideTemp.index
     DataElec.index = MaskedOutsideTemp.index
     DataPlot.index = MaskedOutsideTemp.index
     DataPlot1.index = MaskedOutsideTemp.index

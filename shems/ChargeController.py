@@ -396,9 +396,16 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
 
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
+        test6 = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)
         connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)  # .resample(time_resolution).mean()[1:]
-        pic = time.time()
-        connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)
+        # pic = time.time()
+
+        test1 = plug_in_time.replace(year=2019)
+        test2 = plug_out_time.replace(year=2019)
+        test3 = time_resolution
+        test4 = inputs
+        test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
+        connection_extract['Heating_Power'] = test5.values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
         poc = time.time()
         # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(plug_in_time, plug_out_time, time_resolution)
         if heating_type == 'Gas':
@@ -490,7 +497,7 @@ def main(inputs, row):
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
 
-    print(plug_out_time)
+    # print(plug_out_time)
 
     tic = time.time()
 
