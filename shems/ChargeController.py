@@ -5,6 +5,7 @@ import HomeGenerationCode as HomeGen
 import IntergratedHeating as Heat
 # import Journey_charge_v2 as JourneyCharge
 import time
+import API_tests
 import csv
 
 def vrg(charge_schedule, battery_mode):
@@ -205,7 +206,7 @@ def virtual_cost(charge_schedule, charger_type):
         charge_schedule['Virtual_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
 
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
-                departure_time - arrival_time)
+                plug_out_time - plug_in_time)
         cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
         charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
@@ -218,7 +219,7 @@ def virtual_cost(charge_schedule, charger_type):
         export_kW = charge_rate - home_consumption_kW
         charge_schedule['Virtual_Revenue'] = (kWh_discharge_price * home_consumption_kW + (kWh_discharge_price - kWh_export_fee) * export_kW) * time_resolution / pd.Timedelta('60 min') * charger_efficiency
 
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (plug_out_time - plug_in_time)
         cycle_cost_fraction = battery_cost_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor / (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Cost'] = charge_schedule['Price'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
@@ -232,7 +233,7 @@ def virtual_cost(charge_schedule, charger_type):
         update_revenue_mask = ~keep_revenue_mask
         charge_schedule['Virtual_Revenue'] = update_revenue_mask * kWh_discharge_price * home_consumption_kW * time_resolution / pd.Timedelta('60 min') * charger_efficiency + charge_schedule['Virtual_Revenue'] * keep_revenue_mask
 
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (plug_out_time - plug_in_time)
         cycle_cost_fraction = battery_cost_per_kWh * home_consumption_kW * time_resolution / pd.Timedelta('60 min') / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor/ (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Cost'] = update_revenue_mask * (charge_schedule['Price'] * (home_consumption_kW - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost) + charge_schedule['Virtual_Cost'] * keep_revenue_mask
@@ -272,7 +273,7 @@ def virtual_carbon_cost(charge_schedule, charger_type):
         charge_schedule['Virtual_Carbon_Revenue'] = 0  # IDEA: PV_kWh_resolution * charge_schedule['Price'] * charger_efficiency
 
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (
-                departure_time - arrival_time)
+                plug_out_time - plug_in_time)
         cycle_cost_fraction = battery_carbon_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction / (1 - soc_from_15 * charge_held_fraction * lifetime_ageing_factor)
         charge_schedule['Virtual_Carbon_Cost'] = charge_schedule['Carbon Intensity'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
@@ -285,7 +286,7 @@ def virtual_carbon_cost(charge_schedule, charger_type):
         export_kW = charge_rate - home_consumption_kW
         charge_schedule['Virtual_Carbon_Revenue'] = (kWh_discharge_price * (home_consumption_kW * export_kW)) * time_resolution / pd.Timedelta('60 min') * charger_efficiency
 
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (plug_out_time - plug_in_time)
         cycle_cost_fraction = battery_carbon_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor / (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Carbon_Cost'] = charge_schedule['Carbon Intensity'] * (charge_rate - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost
@@ -299,7 +300,7 @@ def virtual_carbon_cost(charge_schedule, charger_type):
         update_revenue_mask = ~keep_revenue_mask
         charge_schedule['Virtual_Carbon_Revenue'] = update_revenue_mask * kWh_discharge_price * home_consumption_kW * time_resolution / pd.Timedelta('60 min') * charger_efficiency + charge_schedule['Virtual_Carbon_Revenue'] * keep_revenue_mask
 
-        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
+        charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (plug_out_time - plug_in_time)
         cycle_cost_fraction = battery_carbon_per_kWh * home_consumption_kW * time_resolution / pd.Timedelta('60 min') / max_battery_cycles  # cost of battery wear due to charging and discharging
         battery_ageing_cost = cycle_cost_fraction * lifetime_ageing_factor/ (1 - soc_from_15 * charge_held_fraction)
         charge_schedule['Virtual_Carbon_Cost'] = update_revenue_mask * (charge_schedule['Carbon Intensity'] * (home_consumption_kW - charge_schedule['Solar_Power']) * time_resolution / pd.Timedelta('60 min') / charger_efficiency + battery_ageing_cost) + charge_schedule['Virtual_Carbon_Cost'] * keep_revenue_mask
@@ -383,23 +384,23 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
     carbon_intensity.index = carbon_intensity.index.tz_localize(None)
     agile_extract_exp.index = agile_extract_exp.index.tz_localize(None)
 
-    # carbon_extract = carbon_intensity[arrival_time.replace(year=2021): departure_time.replace(year=2021)].copy()
+    # carbon_extract = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].copy()
 
-    connection_extract = agile_extract[arrival_time: departure_time].copy()  # .iloc[:-1, :]
+    connection_extract = agile_extract[plug_in_time: plug_out_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
     connection_extract.loc[connection_extract.index.max(), 'Price'] = kWh_export_fee / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
-    connection_extract['Carbon Intensity'] = carbon_intensity[arrival_time.replace(year=2021): departure_time.replace(year=2021)].values
+    connection_extract['Carbon Intensity'] = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].values
     connection_extract['Charge_In_Interval'] = 0
     connection_extract.loc[connection_extract.index.min(), 'SoC'] = plug_in_SoC
 
     if appliance_forecast:
-        connection_extract['Appliance_Power'] = ApplianceDemand.main(arrival_time, departure_time).resample(time_resolution).mean()  # [1:]
-        connection_extract['Solar_Power'] = HomeGen.main(arrival_time.replace(year=2019), departure_time.replace(year=2019), time_resolution)  # .resample(time_resolution).mean()[1:]
+        connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
+        connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution)  # .resample(time_resolution).mean()[1:]
         pic = time.time()
-        connection_extract['Heating_Power'] = Heat.mainElec(arrival_time.replace(year=2019), departure_time.replace(year=2019), time_resolution)
+        connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution)
         poc = time.time()
-        # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(arrival_time, departure_time, time_resolution)
+        # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(plug_in_time, plug_out_time, time_resolution)
         if heating_type == 'Gas':
             connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_price
@@ -422,6 +423,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
                 'Heating_Power']  # - connection_extract['Solar_Power']
             total_gas_cost = 0
 
+
     return connection_extract, total_gas_cost
 
 
@@ -439,8 +441,8 @@ def main(inputs, row):
     global price_volatility_factor
     global tariff_imp_data
     global tariff_exp_data
-    global arrival_time
-    global departure_time
+    global plug_in_time
+    global plug_out_time
     global time_resolution
     global vrg_charge_duration
     global v1g_charge_duration
@@ -452,11 +454,12 @@ def main(inputs, row):
     global case
     global battery_carbon_per_kWh
     global motivation
+    global destination_arrival_time
 
     charge_rate = inputs['Charge Rate']  # kW
     battery_capacity = inputs['Battery Capacity']  # kWh
     charger_efficiency = inputs['Charger Efficiency']  # 0.9 for charger UPDATE TO HAVE SEPARATE VALUE FOR CHARGE AND DISCHARGE
-    plug_in_SoC = inputs['Plug in SoC']
+    plug_in_SoC = inputs['Plug In SoC']
     battery_cost_per_kWh = inputs['Battery Cost per kWh']  # 137e2
     battery_v2g_floor = inputs['SoC Floor']
     battery_v2g_ceil = inputs['SoC Ceil']
@@ -466,8 +469,8 @@ def main(inputs, row):
     price_volatility_factor = inputs['Price Volatility']  # 1
     tariff_imp_data = inputs['Tariff Import Data']  # 'Inputs\AgileExtract.xls'
     tariff_exp_data = inputs['Tariff Export Data']  # 'Inputs\AgileExtract.xls'
-    arrival_time = pd.to_datetime(inputs['Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-    departure_time = pd.to_datetime(inputs['Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+    plug_in_time = pd.to_datetime(inputs['Plug In Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+
     time_resolution = pd.Timedelta(inputs['Time Resolution'])
     vrg_charge_duration = pd.Timedelta(inputs['Reserve Charge Duration'])  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
     v1g_charge_duration = pd.Timedelta(inputs['Journey Charge Duration'])  # 2 TO be provided by Yaz's algo to calculate energy from distance
@@ -480,6 +483,14 @@ def main(inputs, row):
     cost_of_change = inputs['Cost of Change']
     battery_carbon_per_kWh = inputs['Battery Carbon per kWh']
     motivation = inputs['Battery Motivation']
+    destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
+
+    if battery_mode == 'EV':
+        plug_out_time = destination_arrival_time - API_tests.journey_time_traffic()
+    else:
+        plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
+
+    print(plug_out_time)
 
     tic = time.time()
 
@@ -545,8 +556,8 @@ def main(inputs, row):
 # # tariff_data = 'Inputs\Fixed22Tariff.csv'  # 'Inputs\AgileExtract.xls'
 # # tariff_data = 'Inputs\AgileExtract.csv'  # 'Inputs\AgileExtract.xls'
 # tariff_data = 'Inputs\AgileExtract2.csv'  # 'Inputs\AgileExtract.xls'
-# arrival_time = pd.to_datetime('2021-02-21 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-# departure_time = pd.to_datetime('2021-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+# plug_in_time = pd.to_datetime('2021-02-21 19:00:00')  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+# plug_out_time = pd.to_datetime('2021-02-26 07:00:00')  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 # time_resolution = pd.Timedelta('15 min')
 # vrg_charge_duration = pd.Timedelta('0.5 h')  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
 # # v1g_charge_duration = pd.to_timedelta(JourneyCharge.main()[2], 'h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
@@ -580,8 +591,8 @@ def main(inputs, row):
 #     # tariff_data = 'Inputs\AgileExtract.csv'  # 'Inputs\AgileExtract.xls'
 #     tariff_imp_data = inputs_table.loc[row, 'Tariff Import Data']  # 'Inputs\AgileExtract.xls'
 #     tariff_exp_data = inputs_table.loc[row, 'Tariff Export Data']  # 'Inputs\AgileExtract.xls'
-#     arrival_time = pd.to_datetime(inputs_table.loc[row, 'Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
-#     departure_time = pd.to_datetime(inputs_table.loc[row, 'Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
+#     plug_in_time = pd.to_datetime(inputs_table.loc[row, 'Arrival Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
+#     plug_out_time = pd.to_datetime(inputs_table.loc[row, 'Departure Time'])  # '2019-02-27 07:00:00' Bugged: '2019-07-26 07:00:00'
 #     time_resolution = pd.Timedelta(inputs_table.loc[row, 'Time Resolution'])
 #     vrg_charge_duration = pd.Timedelta(inputs_table.loc[row, 'Reserve Charge Duration'])  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
 #     # v1g_charge_duration = pd.to_timedelta(JourneyCharge.main()[2], 'h')  # 2 TO be provided by Yaz's algo to calculate energy from distance
@@ -592,7 +603,7 @@ def main(inputs, row):
 #     gas_efficiency = inputs_table.loc[row, 'Gas Efficiency']
 #     smart_home = inputs_table.loc[row, 'Smart Home']
 #
-#     # app_demand_series = ApplianceDemand.main(arrival_time, departure_time)
+#     # app_demand_series = ApplianceDemand.main(plug_in_time, plug_out_time)
 #     # app_demand_series_frac = app_demand_series.resample(time_resolution).mean()
 #     # app_demand_series_frac = app_demand_series_frac/charge_rate
 #

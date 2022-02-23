@@ -70,9 +70,9 @@ def journey_distance():
 
 def journey_time_traffic():
        response = initialise_api_data()
-       ttime_seconds = response.json()["rows"][0]["elements"][0]["duration_in_traffic"]["value"]
-       ttime_minutes = round((ttime_seconds / 60), 2)
-       return ttime_minutes
+       ttime = pd.Timedelta(str(response.json()["rows"][0]["elements"][0]["duration_in_traffic"]["value"]) + 's')
+       # ttime_minutes = round((ttime_seconds / 60), 2)
+       return ttime
 
 if __name__ == "__main__":
     main()
