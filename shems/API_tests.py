@@ -10,6 +10,7 @@ Feb 2022
 """
 
 import requests
+import pandas as pd
 
 def main():
        response = initialise_api_data()
@@ -36,7 +37,10 @@ def initialise_api_data():
        API_KEY = 'AIzaSyCsNLYOColvC8uLS7EeNMRi5nK1kr_KSp8'
        journey_start = journey_origin()
        journey_end = journey_destination()
-       departure_time = 'now'
+       departure_time = pd.to_datetime('2022-04-29 17:00:00')
+       datum_time = pd.to_datetime('1970-01-01 00:00:00')
+       one_s = pd.Timedelta("1 s")
+       departure_time_s = int((departure_time - datum_time) / one_s)
        traffic_model = 'pessimistic'
        url = ('https://maps.googleapis.com/maps/api/distancematrix/json'
               + '?language=en-US&units=imperial'
@@ -45,7 +49,7 @@ def initialise_api_data():
               + '&key={}'
               + '&departure_time={}'
               + '&traffic_model={}'
-              ).format(journey_start, journey_end, API_KEY, departure_time, traffic_model)
+              ).format(journey_start, journey_end, API_KEY, departure_time_s, traffic_model)
        payload = {}
        headers = {}
        response = requests.request("GET", url, headers=headers, data=payload)
