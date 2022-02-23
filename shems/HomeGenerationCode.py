@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 import os
 
 
-def main(arrival_time, departure_time, time_resolution):
+def main(arrival_time, departure_time, time_resolution,inputs):
 
     Solar_Panel_Area = 1.4
     Space_From_Edge = 0.5
     System_Efficency = 0.85
-    Roof_Height = 5
-    Roof_Length = 6
+    Roof_Height = inputs['Roof Height']
+    Roof_Length = inputs['Roof Width']
 
     ## Roof Calcs ##
     Area_of_Roof = Roof_Height * Roof_Length

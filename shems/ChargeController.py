@@ -375,7 +375,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 # def charge_duration
 
 
-def initialise_charge_schedule(appliance_forecast, heating_type):
+def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     carbon_intensity = pd.read_csv('../Inputs/' + 'CombinedCO2.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
@@ -396,9 +396,9 @@ def initialise_charge_schedule(appliance_forecast, heating_type):
 
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
-        connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution)  # .resample(time_resolution).mean()[1:]
+        connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)  # .resample(time_resolution).mean()[1:]
         pic = time.time()
-        connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution)
+        connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)
         poc = time.time()
         # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(plug_in_time, plug_out_time, time_resolution)
         if heating_type == 'Gas':
@@ -495,7 +495,7 @@ def main(inputs, row):
     tic = time.time()
 
     """Main body of code"""
-    zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type)
+    zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type,inputs)
 
     # plt.plot(zeros_charge_schedule['Home_Power'], label='Home Power')
     # plt.show()

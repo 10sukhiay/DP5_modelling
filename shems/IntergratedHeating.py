@@ -63,10 +63,10 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
     PowerRating = inputs['Boiler Rating']
     ShowerTemp = inputs['Water Temp']
     TotalHeatedWater = 0
-    TankVolume = ['Tank Volume']
+    TankVolume = inputs['Tank Volume']
     
     total_rows = len(MaskedOutsideTemp)*time_res
-    Water = mainShower(arrival_time, departure_time,time_resolution)
+    Water = mainShower(arrival_time, departure_time,time_resolution,inputs)
     
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
@@ -237,7 +237,7 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
     ShowerTemp = inputs['Water Temp']
 
     total_rows = len(MaskedOutsideTemp)*time_res
-    Water = mainShower(arrival_time, departure_time,time_resolution)
+    Water = mainShower(arrival_time, departure_time,time_resolution,inputs)
     
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
@@ -443,7 +443,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     ShowerTemp = inputs['Water Temp']
 
     total_rows = len(MaskedOutsideTemp)*time_res
-    Water = mainShower(arrival_time, departure_time,time_resolution)
+    Water = mainShower(arrival_time, departure_time,time_resolution,inputs)
     
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
@@ -585,7 +585,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
 def mainShower(arrival_time, departure_time,time_resolution,inputs):
     global ShowerPower
     NoOfShowers = inputs['No. of Showers']
-    WaterPerShower = inputs['Water per Shower']
+    WaterPerShower = inputs['Water per Shower ']
     
     app_data = 'Inputs/Typical_home_demand.xls'
     app_demand = pd.read_excel(os.getcwd()[:-5] + app_data)
