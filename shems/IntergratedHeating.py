@@ -185,9 +185,12 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Window_Area = 2;
     No_Windows = 10;
     Door_Area = 2;
-    No_Doors = 3;    
+    No_Doors = 3;  
+    
+    hour_resolution = pd.Timedelta('60 min')
+    timeratio = hour_resolution / time_resolution
 
-    time_res = 5
+    time_res = 60 / timeratio
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -200,7 +203,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     Time = 0
     Time_Data = []
 
-    Power_df1 = pd.DataFrame(columns=['Power'])
+    Power_df1 = pd.DataFrame()
     DataASHP = pd.DataFrame()
     DataPlot = pd.DataFrame()
     DataPlot1 = pd.DataFrame()
@@ -287,7 +290,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df1 = Power_df1.append({'Power': HeatPump_Power / 1000}, ignore_index=True)
+            Power_df1 = Power_df1.append({'Total Power': HeatPump_PowerTot  / 1000}, ignore_index=True)
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
             
@@ -355,7 +358,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df1 = Power_df1.append({'Power': Heating / 1000}, ignore_index=True)
+            Power_df1 = Power_df1.append({'Total Power': HeatPump_PowerTot / 1000}, ignore_index=True)
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
         
@@ -368,7 +371,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     DataPlot1.plot(secondary_y=['Total_Power','HeatPump_Power','Water_Power'] ).legend(loc='lower left')
     plt.legend(loc='upper right')
     
-    TotalPower = Power_df1.sum()
+    TotalPower = Power_df1.sum() / timeratio
     print(TotalPower)
     
     return Power_df1
@@ -404,7 +407,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     Time = 0
     Time_Data = []
 
-    Power_df2 = pd.DataFrame(columns=['Power'])
+    Power_df2 = pd.DataFrame()
     DataGSHP = pd.DataFrame()
     DataPlot = pd.DataFrame()
     DataPlot1 = pd.DataFrame()
@@ -491,7 +494,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df2 = Power_df2.append({'Power': HeatPump_Power / 1000}, ignore_index=True)
+            Power_df2 = Power_df2.append({'Total Power': HeatPump_PowerTot / 1000}, ignore_index=True)
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
             
@@ -559,7 +562,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df2 = Power_df2.append({'Power': Heating / 1000}, ignore_index=True)
+            Power_df2 = Power_df2.append({'Total Power': HeatPump_PowerTot / 1000}, ignore_index=True)
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
         
