@@ -19,6 +19,9 @@ import os
 # temp = TempData.index.get_loc(nearest_time, method='nearest')
 # print(temp)
 
+# test_yaz = journey.main(inputs_table.loc[1, :])
+# print(test_yaz)
+
 def main(inputs):
     results_journey(inputs)
     charge_time = time_charge(inputs)

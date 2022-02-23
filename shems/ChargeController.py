@@ -493,7 +493,7 @@ def main(inputs, row):
     destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
 
     if battery_mode == 'EV':
-        plug_out_time = destination_arrival_time - API_tests.journey_time_traffic()
+        plug_out_time = destination_arrival_time - API_tests.journey_time_traffic(inputs)
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
 
