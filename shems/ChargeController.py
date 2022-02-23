@@ -283,7 +283,7 @@ def virtual_carbon_cost(charge_schedule, charger_type):
         kWh_discharge_price = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Carbon Intensity'].values
         home_consumption_kW = charge_schedule.loc[charge_schedule['Discharge_Time'], 'Home_Power'].values
         export_kW = charge_rate - home_consumption_kW
-        charge_schedule['Virtual_Carbon_Revenue'] = (kWh_discharge_price * home_consumption_kW + (kWh_discharge_price - kWh_export_fee) * export_kW) * time_resolution / pd.Timedelta('60 min') * charger_efficiency
+        charge_schedule['Virtual_Carbon_Revenue'] = (kWh_discharge_price * (home_consumption_kW * export_kW)) * time_resolution / pd.Timedelta('60 min') * charger_efficiency
 
         charge_held_fraction = (charge_schedule['Discharge_Time'] - charge_schedule.index.to_series()) / (departure_time - arrival_time)
         cycle_cost_fraction = battery_carbon_per_kWh * kWh_resolution * discharge_home_frac / max_battery_cycles  # cost of battery wear due to charging and discharging
@@ -369,6 +369,9 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.clf()
 
     # plt.show()
+
+
+# def charge_duration
 
 
 def initialise_charge_schedule(appliance_forecast, heating_type):
