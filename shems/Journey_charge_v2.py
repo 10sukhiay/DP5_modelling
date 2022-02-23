@@ -14,7 +14,6 @@ import os
 # import numpy as np
 # import matplotlib as plt
 
-# global TempData
 # TempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
 # nearest_time = pd.to_datetime('26-02-2019 07:35:00')
 # temp = TempData.index.get_loc(nearest_time, method='nearest')
