@@ -4,32 +4,32 @@ import os
 from datetime import datetime, timedelta
 import numpy as np
 
-def mainElec(arrival_time, departure_time, time_resolution):
+def mainElec(arrival_time, departure_time, time_resolution,inputs):
     plt.close('all')
    
     ## Variables ##
-    time_res =  pd.Timedelta('60 min')
-    #timeratio = hour_resolution / time_resolution
+    hour_resolution = pd.Timedelta('60 min')
+    timeratio = hour_resolution / time_resolution
+    time_res = 60 / timeratio
     global DataElec
     global Power_df
     
     ## Room Specs ##
     Wall_Height = 2.4;
-    Wall_Length = 10;
+    Wall_Length = inputs['Wall Length']
     Window_Area = 2;
-    No_Windows = 10;
+    No_Windows = inputs['No.Windows']
     Door_Area = 2;
-    No_Doors = 3;    
+    No_Doors = inputs['No.Doors']    
 
-    time_res = 15
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
-    Inside_Temp = 15
-    Desired_Temp = 21
+    Inside_Temp = inputs['Inside Temp']
+    Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
     Time_Data = []
@@ -49,9 +49,9 @@ def mainElec(arrival_time, departure_time, time_resolution):
     SHC_Water = 4187
         
     ## Loss through walls,roof and floor ##
-    WallU = 0.3
+    WallU = inputs['Wall U']
     FloorU = 0.22
-    RoofU = 0.16
+    RoofU = inputs['Roof U']
     WindowU = 1.8
     Window_Area = 1.2 * 2
     No_Windows = 4
@@ -60,10 +60,10 @@ def mainElec(arrival_time, departure_time, time_resolution):
     No_Doors = 2
     SmallCorrection = 1
     ## Room heating ##
-    PowerRating = 1000
-    ShowerTemp = 40
+    PowerRating = inputs['Boiler Rating']
+    ShowerTemp = inputs['Water Temp']
     TotalHeatedWater = 0
-    TankVolume = 120
+    TankVolume = ['Tank Volume']
     
     total_rows = len(MaskedOutsideTemp)*time_res
     Water = mainShower(arrival_time, departure_time,time_resolution)
@@ -172,7 +172,7 @@ def mainElec(arrival_time, departure_time, time_resolution):
 
     return Power_df
 
-def mainASHP(arrival_time, departure_time, time_resolution):
+def mainASHP(arrival_time, departure_time, time_resolution,inputs):
 
     plt.close('all')
     
@@ -181,11 +181,11 @@ def mainASHP(arrival_time, departure_time, time_resolution):
         
     ## Room Specs ##
     Wall_Height = 2.4;
-    Wall_Length = 10;
+    Wall_Length = inputs['Wall Length']
     Window_Area = 2;
-    No_Windows = 10;
+    No_Windows = inputs['No.Windows']
     Door_Area = 2;
-    No_Doors = 3;  
+    No_Doors = inputs['No.Doors']    
     
     hour_resolution = pd.Timedelta('60 min')
     timeratio = hour_resolution / time_resolution
@@ -197,8 +197,8 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
-    Inside_Temp = 15
-    Desired_Temp = 21
+    Inside_Temp = inputs['Inside Temp']
+    Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
     Time_Data = []
@@ -218,9 +218,9 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     SHC_Air = 1000
         
     ## Loss through walls,roof and floor ##
-    WallU = 0.3
+    WallU = inputs['Wall U']
     FloorU = 0.22
-    RoofU = 0.16
+    RoofU = inputs['Roof U']
     WindowU = 1.8
     Window_Area = 1.2 * 2
     No_Windows = 4
@@ -229,12 +229,12 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     No_Doors = 2
     
     ## Room heating ##
-    HeatPump_Rated = 2000
+    HeatPump_Rated = inputs['Heatpump Rating']
     HeatPump_Power = HeatPump_Rated
     TotalHeatedWater = 0
-    TankVolume = 120
+    TankVolume = inputs['Tank Volume']
     SHC_Water = 4180
-    ShowerTemp = 40
+    ShowerTemp = inputs['Water Temp']
 
     total_rows = len(MaskedOutsideTemp)*time_res
     Water = mainShower(arrival_time, departure_time,time_resolution)
@@ -376,7 +376,7 @@ def mainASHP(arrival_time, departure_time, time_resolution):
     
     return Power_df1
 
-def mainGSHP(arrival_time, departure_time, time_resolution):
+def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
 
     plt.close('all')
     
@@ -384,16 +384,18 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     global DataGSHP
     global DataPlot1
 
+    hour_resolution = pd.Timedelta('60 min')
+    timeratio = hour_resolution / time_resolution
+    time_res = 60 / timeratio
         
     ## Room Specs ##
     Wall_Height = 2.4;
-    Wall_Length = 10;
+    Wall_Length = inputs['Wall Length']
     Window_Area = 2;
-    No_Windows = 10;
+    No_Windows = inputs['No.Windows']
     Door_Area = 2;
-    No_Doors = 3;    
+    No_Doors = inputs['No.Doors']     
 
-    time_res = 5
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
@@ -401,8 +403,8 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     MaskedOutsideTemp = MaskedOutsideTemp + 1
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
-    Inside_Temp = 15
-    Desired_Temp = 21
+    Inside_Temp = inputs['Inside Temp']
+    Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
     Time_Data = []
@@ -422,9 +424,9 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     SHC_Air = 1000
         
     ## Loss through walls,roof and floor ##
-    WallU = 0.3
+    WallU = inputs['Wall U']
     FloorU = 0.22
-    RoofU = 0.16
+    RoofU = inputs['Roof U']
     WindowU = 1.8
     Window_Area = 1.2 * 2
     No_Windows = 4
@@ -433,12 +435,12 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     No_Doors = 2
     
     ## Room heating ##
-    HeatPump_Rated = 2000
+    HeatPump_Rated = inputs['Heatpump Rating']
     HeatPump_Power = HeatPump_Rated
     TotalHeatedWater = 0
-    TankVolume = 120
+    TankVolume = inputs['Tank Volume']
     SHC_Water = 4180
-    ShowerTemp = 40
+    ShowerTemp = inputs['Water Temp']
 
     total_rows = len(MaskedOutsideTemp)*time_res
     Water = mainShower(arrival_time, departure_time,time_resolution)
@@ -580,8 +582,10 @@ def mainGSHP(arrival_time, departure_time, time_resolution):
     
     return Power_df2
 
-def mainShower(arrival_time, departure_time,time_resolution):
+def mainShower(arrival_time, departure_time,time_resolution,inputs):
     global ShowerPower
+    NoOfShowers = inputs['No. of Showers']
+    WaterPerShower = inputs['Water per Shower']
     
     app_data = 'Inputs/Typical_home_demand.xls'
     app_demand = pd.read_excel(os.getcwd()[:-5] + app_data)
@@ -594,6 +598,6 @@ def mainShower(arrival_time, departure_time,time_resolution):
             for day in dates:
                 time_on = pd.to_datetime(str(day) + ' ' + str(row['Time On']))
                 ShowerPower.loc[time_on: time_on , 'Power'] += row['Power']
-    ShowerPower = ShowerPower * 40
+    ShowerPower = ShowerPower * WaterPerShower * NoOfShowers
         
     return ShowerPower
