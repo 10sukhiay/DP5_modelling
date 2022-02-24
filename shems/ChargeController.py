@@ -512,6 +512,8 @@ def main(inputs, row):
 
     # print(plug_out_time)
 
+    test_yaz = jcharge.petrol_cost(inputs, False)
+
     tic = time.time()
 
     """Main body of code"""

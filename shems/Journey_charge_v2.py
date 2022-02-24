@@ -28,7 +28,7 @@ def main(inputs, reserve_journey):
     return charge_time
 
 # Defines the relationship between ambient temperature and range
-"""Ambient temperature selection can be made in the Inputs_Journey file """
+"""Ambient temperature selection can be changed in the InputSchedule file [[[[OR IN ----- FILE (ONCE CREATED)]]]]"""
 def temp(inputs, reserve_journey):
     plug_out_time = plug_out(inputs, reserve_journey)
     TempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
@@ -140,9 +140,12 @@ def joruney_savings(inputs, reserve_journey):
     return trip_savings
 
 def petrol_cost(inputs, reserve_journey):
-    l_per_km = (2.35215 / inputs['MPG'])
-    petrol_consump_rate = l_per_km # in litres per km
-    petrol_cost = inputs['p per litre']
+    plug_out_time = plug_out(inputs, reserve_journey)
+    Petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2021_data_petrol_price.xlsx', parse_dates=[0], index_col=0)
+    p_per_litre = Petrol_price_data[plug_out_time.replace(year=2021):plug_out_time.replace(year=2021) + pd.Timedelta(days=7)].copy().iloc[0,0]
+    l_per_km = (2.35215 / inputs['MPG'])  # in litres per km
+    petrol_consump_rate = l_per_km
+    petrol_cost = p_per_litre     # CAN USE inputs['p per litre'] INSTEAD FROM INPUT FILE
     petrol_p_per_km = petrol_consump_rate * petrol_cost
     journey_petrol_price = API.journey_distance(inputs, reserve_journey) * petrol_p_per_km
     return journey_petrol_price
