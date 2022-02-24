@@ -319,7 +319,7 @@ def virtual_carbon_cost(charge_schedule, charger_type):
     return charge_schedule
 
 
-def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, case, row):
+def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, charge_schedule_v2hg, case, row):
     """Plot DP4 equivalent figures"""
 
     fig = plt.figure(figsize=(20, 15), dpi=100)
@@ -349,6 +349,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.plot(charge_schedule_v1g['SoC'], label='v1g SoC')
     plt.plot(charge_schedule_v2g['SoC'], label='v2g SoC')
     plt.plot(charge_schedule_v2h['SoC'], label='v2h SoC')
+    plt.plot(charge_schedule_v2hg['SoC'], label='v2hg SoC')
     plt.grid()
     plt.legend()
 
@@ -543,8 +544,8 @@ def main(inputs, row):
     vrg_charge_schedule_max = virtual_carbon_cost(virtual_cost(calculate_soc(vrg_max(zeros_charge_schedule.copy(), battery_mode)), 'v1g'), 'v1g')
     v1g_charge_schedule = v1g(vrg_charge_schedule.copy(), battery_mode, motivation)
     v2g_charge_schedule = v2(v1g_charge_schedule.copy(), 'g', motivation)
-    v2h_charge_schedule = v2(v2g_charge_schedule.copy(), 'h', motivation)
-    # v2h_charge_schedule = v2h(v1g_charge_schedule.copy())
+    v2hg_charge_schedule = v2(v2g_charge_schedule.copy(), 'h', motivation)
+    v2h_charge_schedule = v2(v1g_charge_schedule.copy(), 'h', motivation)
 
     calculate_running_cost(vrg_charge_schedule_max)
     calculate_running_cost(v1g_charge_schedule)
@@ -574,7 +575,7 @@ def main(inputs, row):
     print('Test ' + str(row) + ' done in {:.4f} seconds'.format(toc - tic))
     print('--------------------------------------------------')
 
-    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, case, row)
+    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, v2hg_charge_schedule, case, row)
 
     return results
 
