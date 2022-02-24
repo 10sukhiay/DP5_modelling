@@ -7,6 +7,7 @@ import Journey_charge_v2 as jcharge
 import time
 import API_tests
 import csv
+import math
 
 def vrg(charge_schedule, battery_mode):
     """Populates charge schedule such that the vrg charging is done all upon connection"""
@@ -160,11 +161,19 @@ def add_discharge_to_schedule(charge_schedule, working_charge_schedule, discharg
     """Minimise repetition in adding/removing charge/discharge interval pairs to charge schedule."""
     if motivation == 'Price':
         charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Charge_In_Interval'] += value
-        charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] += value/value
+        if math.isnan(value/value):
+            bodge = 1
+        else:
+            bodge = value/value
+        charge_schedule.loc[working_charge_schedule['Virtual_Net'].idxmin(), 'Checked'] += bodge
         charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= value
     if motivation == 'Carbon':
         charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Net'].idxmin(), 'Charge_In_Interval'] += value
-        charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Net'].idxmin(), 'Checked'] += value / value
+        if math.isnan(value/value):
+            bodge = 1
+        else:
+            bodge = value/value
+        charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Net'].idxmin(), 'Checked'] += bodge
         charge_schedule.loc[discharge_time, 'Charge_In_Interval'] -= value
 
 
@@ -375,7 +384,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 # def charge_duration
 
 
-def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
+def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     carbon_intensity = pd.read_csv('../Inputs/' + 'CombinedCO2.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
@@ -400,7 +409,6 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
         connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)  # .resample(time_resolution).mean()[1:]
     else:
         connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
-
 
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
@@ -435,16 +443,8 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
     else:
         connection_extract['Appliance_Power'] = connection_extract['Price'] * 0  # BODGE
         connection_extract['Heating_Power'] = connection_extract['Price'] * 0  # BODGE
-        if heating_type == 'Gas':
-            connection_extract['Home_Power'] = connection_extract[
-                'Appliance_Power']  # - connection_extract['Solar_Power']
-            gas_cost = connection_extract['Heating_Power'] / gas_efficiency * time_resolution / pd.Timedelta(
-                '60 min') * gas_price
-            total_gas_cost = gas_cost.cumsum()[-1]
-        else:
-            connection_extract['Home_Power'] = connection_extract['Appliance_Power'] + connection_extract[
-                'Heating_Power']  # - connection_extract['Solar_Power']
-            total_gas_cost = 0
+        connection_extract['Home_Power'] = connection_extract['Price'] * 0  # BODGE
+        total_gas_cost = 0
 
 
     return connection_extract, total_gas_cost
@@ -510,17 +510,28 @@ def main(inputs, row):
     destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
     solar_connected = inputs['Solar Capability']
 
+    tic = time.time()
+
+    if battery_mode == 'ICE':  # WARNING not obvious but this short circuits the program. Makes all other inputs irrelevant
+        petrol_cost = jcharge.petrol_cost(inputs, False)
+
+        results = [case, cost_of_change,
+                   petrol_cost,
+                   petrol_cost,
+                   petrol_cost,
+                   petrol_cost,
+                   0]
+
+        toc = time.time()
+        print('Test ' + str(row) + ' done in {:.4f} seconds'.format(toc - tic))
+        print('--------------------------------------------------')
+
+        return results
+
     if battery_mode == 'EV':
         plug_out_time = jcharge.plug_out(inputs, False)
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
-
-
-    # print(plug_out_time)
-
-    test_yaz = jcharge.petrol_cost(inputs, False)
-
-    tic = time.time()
 
     """Main body of code"""
     zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type,inputs)
