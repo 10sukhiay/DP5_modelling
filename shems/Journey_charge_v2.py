@@ -8,7 +8,7 @@ Feb 2022
 
 # import required packages for use
 import pandas as pd
-import Inputs_Journey_v2 as inp
+# import Inputs_Journey_v2 as inp
 import API_tests as API
 import os
 # import numpy as np

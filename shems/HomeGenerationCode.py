@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-def main(arrival_time, departure_time, time_resolution,inputs):
+def main(arrival_time, departure_time, time_resolution, inputs):
 
     Solar_Panel_Area = 1.4
     Space_From_Edge = 0.5

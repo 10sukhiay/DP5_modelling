@@ -398,23 +398,33 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
 
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
-        test6 = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)
         connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)  # .resample(time_resolution).mean()[1:]
-        # pic = time.time()
 
-        test1 = plug_in_time.replace(year=2019)
-        test2 = plug_out_time.replace(year=2019)
-        test3 = time_resolution
-        test4 = inputs
         test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
-        connection_extract['Heating_Power'] = test5.values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
         poc = time.time()
         # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(plug_in_time, plug_out_time, time_resolution)
         if heating_type == 'Gas':
+            connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019),
+                                                                plug_out_time.replace(year=2019), time_resolution,
+                                                                inputs).values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
             connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_price
             total_gas_cost = gas_cost.cumsum()[-1]
         else:
+            if heating_type == 'Electric':
+                connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019),
+                                                                    plug_out_time.replace(year=2019), time_resolution,
+                                                                    inputs).values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
+            elif heating_type == 'ASHP':
+                connection_extract['Heating_Power'] = Heat.mainASHP(plug_in_time.replace(year=2019),
+                                                                    plug_out_time.replace(year=2019), time_resolution,
+                                                                    inputs).values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
+            elif heating_type == 'GSHP':
+                connection_extract['Heating_Power'] = Heat.mainGSHP(plug_in_time.replace(year=2019),
+                                                                    plug_out_time.replace(year=2019), time_resolution,
+                                                                    inputs).values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
+            else:
+                print('Error: heat type input invalid')
             connection_extract['Home_Power'] = connection_extract['Appliance_Power'] + connection_extract['Heating_Power']  # - connection_extract['Solar_Power']
             total_gas_cost = 0
     else:
@@ -482,7 +492,7 @@ def main(inputs, row):
 
     time_resolution = pd.Timedelta(inputs['Time Resolution'])
     vrg_charge_duration = jcharge.time_charge(inputs, True)  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
-    v1g_charge_duration = jcharge.time_charge(inputs, False) # 2 TO be provided by Yaz's algo to calculate energy from distance
+    v1g_charge_duration = jcharge.time_charge(inputs, False)  # 2 TO be provided by Yaz's algo to calculate energy from distance
     battery_mode = inputs['Battery Mode']  # EV or Home
     heating_type = inputs['Heating Type']
     gas_price = inputs['Gas Price']  # 3.8 p
