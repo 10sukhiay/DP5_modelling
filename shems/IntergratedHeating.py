@@ -371,8 +371,8 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
     DataPlot1.plot(secondary_y=['Total_Power','HeatPump_Power','Water_Power'] ).legend(loc='lower left')
     plt.legend(loc='upper right')
     
-    TotalPower = Power_df1.sum() / timeratio
-    print(TotalPower)
+    # TotalPower = Power_df1.sum() / timeratio
+    # print(TotalPower)
     
     return Power_df1
 
@@ -577,8 +577,8 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     DataPlot1.plot(secondary_y=['Total_Power','HeatPump_Power','Water_Power'] ).legend(loc='lower left')
     plt.legend(loc='upper right')
     
-    TotalPower = Power_df2.sum()
-    print(TotalPower)
+    # TotalPower = Power_df2.sum()
+    # print(TotalPower)
     
     return Power_df2
 

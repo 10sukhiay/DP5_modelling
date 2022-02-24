@@ -396,9 +396,14 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
     connection_extract['Charge_In_Interval'] = 0
     connection_extract.loc[connection_extract.index.min(), 'SoC'] = plug_in_SoC
 
+    if solar_connected:
+        connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)  # .resample(time_resolution).mean()[1:]
+    else:
+        connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
+
+
     if appliance_forecast:
         connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
-        connection_extract['Solar_Power'] = HomeGen.main(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution,inputs)  # .resample(time_resolution).mean()[1:]
 
         test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
         poc = time.time()
@@ -429,7 +434,6 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
             total_gas_cost = 0
     else:
         connection_extract['Appliance_Power'] = connection_extract['Price'] * 0  # BODGE
-        connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
         connection_extract['Heating_Power'] = connection_extract['Price'] * 0  # BODGE
         if heating_type == 'Gas':
             connection_extract['Home_Power'] = connection_extract[
@@ -474,6 +478,7 @@ def main(inputs, row):
     global battery_carbon_per_kWh
     global motivation
     global destination_arrival_time
+    global solar_connected
 
     charge_rate = inputs['Charge Rate']  # kW
     battery_capacity = inputs['Battery Capacity']  # kWh
@@ -503,6 +508,7 @@ def main(inputs, row):
     battery_carbon_per_kWh = inputs['Battery Carbon per kWh']
     motivation = inputs['Battery Motivation']
     destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
+    solar_connected = inputs['Solar Capability']
 
     if battery_mode == 'EV':
         plug_out_time = jcharge.plug_out(inputs, False)
