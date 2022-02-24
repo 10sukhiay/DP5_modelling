@@ -150,6 +150,14 @@ def petrol_cost(inputs, reserve_journey):
     journey_petrol_price = API.journey_distance(inputs, reserve_journey) * petrol_p_per_km
     return journey_petrol_price
 
+def journey_carbon_cost(inputs, reserve_journey):
+    l_per_km = (2.35215 / inputs['MPG'])  # in litres per km
+    petrol_consump_rate = l_per_km
+    kg_carbon_per_litre = inputs['Carbon Kg per litre Fuel']
+    petrol_CO2_per_km = petrol_consump_rate * kg_carbon_per_litre
+    journey_CO2_price = round(API.journey_distance(inputs, reserve_journey) * petrol_CO2_per_km, 2)
+    return journey_CO2_price
+
 # def display_results():
 # TO COMPLETE LATER- USE WHEN DISPLAYING RESULTS FOR INDIVIDUAL SECTION
 
