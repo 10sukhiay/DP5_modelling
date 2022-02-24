@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import ApplianceDemand
 import HomeGenerationCode as HomeGen
 import IntergratedHeating as Heat
-# import Journey_charge_v2 as JourneyCharge
+import Journey_charge_v2 as jcharge
 import time
 import API_tests
 import csv
@@ -385,6 +385,8 @@ def initialise_charge_schedule(appliance_forecast, heating_type,inputs):
     agile_extract_exp.index = agile_extract_exp.index.tz_localize(None)
 
     # carbon_extract = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].copy()
+    test = plug_out_time
+    test1 = plug_in_time
 
     connection_extract = agile_extract[plug_in_time: plug_out_time].copy()  # .iloc[:-1, :]
     connection_extract_mean_price = connection_extract['Price'].mean()
@@ -479,8 +481,8 @@ def main(inputs, row):
     plug_in_time = pd.to_datetime(inputs['Plug In Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
 
     time_resolution = pd.Timedelta(inputs['Time Resolution'])
-    vrg_charge_duration = pd.Timedelta(inputs['Reserve Charge Duration'])  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
-    v1g_charge_duration = pd.Timedelta(inputs['Journey Charge Duration'])  # 2 TO be provided by Yaz's algo to calculate energy from distance
+    vrg_charge_duration = jcharge.time_charge(inputs, True)  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
+    v1g_charge_duration = jcharge.time_charge(inputs, False) # 2 TO be provided by Yaz's algo to calculate energy from distance
     battery_mode = inputs['Battery Mode']  # EV or Home
     heating_type = inputs['Heating Type']
     gas_price = inputs['Gas Price']  # 3.8 p
@@ -493,9 +495,10 @@ def main(inputs, row):
     destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
 
     if battery_mode == 'EV':
-        plug_out_time = destination_arrival_time - API_tests.journey_time_traffic(inputs)
+        plug_out_time = jcharge.plug_out(inputs, False)
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
+
 
     # print(plug_out_time)
 

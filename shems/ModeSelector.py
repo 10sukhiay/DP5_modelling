@@ -77,8 +77,8 @@ def pcs(TBM_results):
 
     return PCS_results
 
-# results = run_series()  # use for debug
-results = run_multi()
+results = run_series()  # use for debug
+# results = run_multi()
 PCS_results = pcs(results)
 print(PCS_results)
 
