@@ -497,8 +497,10 @@ def main(inputs, row):
     plug_in_time = pd.to_datetime(inputs['Plug In Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
 
     time_resolution = pd.Timedelta(inputs['Time Resolution'])
-    vrg_charge_duration = jcharge.time_charge(inputs, True)  # 1.6 TO be provided by Yaz's algo to calculate energy from distance  BUG: cannot be -ve
-    v1g_charge_duration = jcharge.time_charge(inputs, False)  # 2 TO be provided by Yaz's algo to calculate energy from distance
+    # vrg_charge_duration = jcharge.time_charge(inputs, True)
+    # v1g_charge_duration = jcharge.time_charge(inputs, False)
+    vrg_charge_duration = pd.Timedelta('30 min')  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
+    v1g_charge_duration =  pd.Timedelta('90 min')  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     battery_mode = inputs['Battery Mode']  # EV or Home
     heating_type = inputs['Heating Type']
     gas_price = inputs['Gas Price']  # 3.8 p
@@ -514,7 +516,8 @@ def main(inputs, row):
     tic = time.time()
 
     if battery_mode == 'ICE':  # WARNING not obvious but this short circuits the program. Makes all other inputs irrelevant
-        petrol_cost = jcharge.petrol_cost(inputs, False)
+        # petrol_cost = jcharge.petrol_cost(inputs, False) + jcharge.petrol_cost(inputs, True)
+        petrol_cost = 100  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
 
         results = [case, cost_of_change,
                    petrol_cost,
@@ -530,7 +533,8 @@ def main(inputs, row):
         return results
 
     if battery_mode == 'EV':
-        plug_out_time = jcharge.plug_out(inputs, False)
+        # plug_out_time = jcharge.plug_out(inputs, False)
+        plug_out_time = pd.to_datetime(inputs['Plug Out Time']) # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
 

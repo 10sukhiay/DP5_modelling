@@ -7,38 +7,46 @@ Feb 2022
 """
 
 # import required packages for use
+import time
 import pandas as pd
-# import Inputs_Journey_v2 as inp
+import Inputs_Journey_v2 as inp
 import API_tests as API
 import os
-# import numpy as np
 # import matplotlib as plt
-
-# temp = TempData.index.get_loc(nearest_time, method='nearest')
-# print(temp)
 
 # test_yaz = journey.main(inputs_table.loc[1, :])
 # print(test_yaz)
 
-def main(inputs, reserve_journey):
-    results_journey(inputs, reserve_journey)
-    charge_time = time_charge(inputs, reserve_journey)
+def main():
+    start_time = time.time()
+    inputs = pd.read_excel('../Inputs/Yaz_Journey_API_inputs_data.xlsx').iloc[0,:]
+
+    results_journey(inputs, False)
+    charge_time = time_charge(inputs, False)
     # print(charge_time)
     # display_results() # this is added after display_results() has been formed
+    end_time = time.time()
+    print('Completed in {:.4f} seconds'.format(end_time - start_time))
     return charge_time
 
 # Defines the relationship between ambient temperature and range
-"""Ambient temperature selection can be changed in the InputSchedule file [[[[OR IN ----- FILE (ONCE CREATED)]]]]"""
 def temp(inputs, reserve_journey):
     plug_out_time = plug_out(inputs, reserve_journey)
     TempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
     temp = TempData[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0,0]
+    # temp = TempData[plug_out_time:plug_out_time + pd.Timedelta('1 h')].copy().iloc[0, 0]
     # temp = inputs['Temperature']
     if temp < 23:
         temp_effect = (1-((23-temp) * 0.0033))
     else:
         temp_effect = 1
     return temp_effect
+
+def rain(inputs, reserve_journey):
+    plug_out_time = plug_out(inputs, reserve_journey)
+    PrecipData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Precipitation_data_uk_2021.xlsx', parse_dates=[0], index_col=0)
+    rain_effect = PrecipData[plug_out_time.replace(year=2021):plug_out_time.replace(year=2021) + pd.Timedelta('1 day')].copy().iloc[0,1]
+    return rain_effect
 
 def plug_out(inputs, reserve_journey):
     destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
@@ -61,7 +69,8 @@ def init_charge(inputs, reserve_journey):
 # Calculates the new charge requirement after the influence of external variables has been considered
 def shift_charge(inputs, reserve_journey):
     temp_effect = temp(inputs, reserve_journey)
-    range_shift = (temp_effect * inputs['Rain'] * inputs['Heating'] * inputs['Cooling'] * inputs['Driving Style'] * inputs['Regen Braking'])
+    rain_effect = rain(inputs, reserve_journey)
+    range_shift = (temp_effect * rain_effect * inputs['Heating'] * inputs['Cooling'] * inputs['Driving Style'] * inputs['Regen Braking'])
     # print(inp.rain[1])
     # print(inp.heating[0])
     # print(inp.cooling[0])
