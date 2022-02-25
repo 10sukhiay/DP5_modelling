@@ -147,6 +147,7 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
                     test = 1.2
                 
                 TotalHeatedWater = TotalHeatedWater + HeatedWater
+            
 
             DataElec = DataElec.append({'OutsideTemp':Outside_Temp,'InsideTemp':Inside_Temp,'test':test, 'Power': Heating, 'EnergyLoss': Energy_Loss,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
             DataPlot = DataPlot.append({'Power': Heating,'TotalHeatedWater':TotalHeatedWater}, ignore_index=True)
@@ -336,9 +337,11 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
                     EnergyForWAter = HeatPump_Rated - HeatPump_Power
                     HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
                     
-                    
                 TotalHeatedWater = TotalHeatedWater + HeatedWater   
-           
+            else:
+               EnergyForWAter = 0
+               HeatPump_PowerTot = HeatPump_Power + EnergyForWAter                   
+            
             if HeatPump_Power > HeatPump_Rated:
                 Heating = HeatPump_Rated * CoP
                 HeatPump_Power = HeatPump_Rated
@@ -541,9 +544,11 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
                 else:
                     EnergyForWAter = HeatPump_Rated - HeatPump_Power
                     HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
-                    
-                    
+                                
                 TotalHeatedWater = TotalHeatedWater + HeatedWater   
+            else:
+                EnergyForWAter = 0
+                HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
            
             if HeatPump_Power > HeatPump_Rated:
                 Heating = HeatPump_Rated * CoP
