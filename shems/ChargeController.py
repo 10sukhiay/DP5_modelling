@@ -30,13 +30,17 @@ def v1g(charge_schedule, battery_mode, motivation):  # ADD CO2 motivation
 
     if battery_mode == 'EV':
         if motivation == 'Price':
-            while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration:
+            while (charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration) and (charge_schedule['Charge_In_Interval'].sum() < (charge_schedule.shape[0] - 1)):
 
                 working_charge_schedule = charge_schedule[charge_schedule['Charge_In_Interval'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
+                test = working_charge_schedule.shape[0]
+                test2 = charge_schedule['Charge_In_Interval'].sum()
+                test3 = (charge_schedule.shape[0] - 1)
                 charge_schedule.loc[working_charge_schedule['Virtual_Cost'].idxmin(), 'Charge_In_Interval'] = 1  # select cheapest available interval to charge
+
             calculate_soc(charge_schedule)  # update SoC after last charge command added
         elif motivation == 'Carbon':
-            while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration:
+            while charge_schedule['Charge_In_Interval'].sum() * time_resolution <= v1g_charge_duration + vrg_charge_duration or charge_schedule['Charge_In_Interval'].iloc[:-1, :].mean() < 1:
 
                 working_charge_schedule = charge_schedule[charge_schedule['Charge_In_Interval'] == 0].iloc[:-1, :]  # select interval from those that are not already designated as charging. Last row omitted as disconnect time (cannot charge during interval)
                 charge_schedule.loc[working_charge_schedule['Virtual_Carbon_Cost'].idxmin(), 'Charge_In_Interval'] = 1  # select cheapest available interval to charge
@@ -325,8 +329,8 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     fig = plt.figure(figsize=(20, 15), dpi=100)
 
     plt.subplot(511)
-    plt.plot(charge_schedule_v2h['Charge_In_Interval'] * charge_rate, label='V2H Charging Demand')
-    plt.plot(charge_schedule_v2g['Charge_In_Interval'] * charge_rate, label='V2G Charging Demand')
+    # plt.plot(charge_schedule_v2h['Charge_In_Interval'] * charge_rate, label='V2H Charging Demand')
+    # plt.plot(charge_schedule_v2g['Charge_In_Interval'] * charge_rate, label='V2G Charging Demand')
     plt.plot(charge_schedule_v2h['Home_Power'], label='Home Power')
     plt.plot(charge_schedule_v2h['Solar_Power'], label='Solar Power')
     # plt.plot(app_demand_series_frac, label='Appliance Demand')
@@ -377,7 +381,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     # plt.title('Test: ' + str(number))  # Doesn't work
     fig.suptitle('Row: ' + str(row + 2) + ', Case: ' + str(case))
     fig.savefig('../Results/Figures/' + str(row + 2) + ' ' + str(case))
-    plt.clf()
+    fig.clf()
 
     # plt.show()
 
@@ -389,10 +393,12 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     carbon_intensity = pd.read_csv('../Inputs/' + 'CombinedCO2.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    home_power_raw = pd.read_csv('../Inputs/' + 'MAC2000Std50HomePowerExcerpt.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
 
     agile_extract.index = agile_extract.index.tz_localize(None)
     carbon_intensity.index = carbon_intensity.index.tz_localize(None)
     agile_extract_exp.index = agile_extract_exp.index.tz_localize(None)
+    home_power_raw.index = home_power_raw.index.tz_localize(None)
 
     # carbon_extract = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].copy()
     test = plug_out_time
@@ -412,7 +418,10 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
         connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
 
     if appliance_forecast:
-        connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
+        # connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
+        connection_extract['Appliance_Power'] = home_power_raw[
+                                                 plug_in_time.replace(year=2019): plug_out_time.replace(
+                                                     year=2019)].values
 
         test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
         poc = time.time()
@@ -452,6 +461,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
 
 
 def main(inputs, row):
+    print('Test ' + str(row) + ' started')
     global charge_rate
     global battery_capacity
     global charger_efficiency

@@ -5,11 +5,11 @@ Yazad Sukhia
 Feb 2022
 """
 import pandas as pd
-import googlemaps # pip install googlemaps (or pycharm installation package)
+# import googlemaps # pip install googlemaps (or pycharm installation package)
 
 
 API_KEY = 'AIzaSyC08mMBGKbKzHBZ2FX7JmUsv3Kh9KPkIPg'
-map_client = googlemaps.Client(API_KEY)
+# map_client = googlemaps.Client(API_KEY)
 
 journey_start = "Bristol, UK, BS8 2AB"
 journey_end = "Bristol, UK, BS1 2NJ"

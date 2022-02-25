@@ -9,7 +9,7 @@ import os
 def run_series():
     bigtic = time.time()
 
-    inputs_table = pd.read_excel('../Inputs/InputSchedule.xlsx')
+    inputs_table = pd.read_excel('../Inputs/InputSchedule2.xlsx')
     total_tests = inputs_table.shape[0]
     test = range(total_tests)
     results = pd.DataFrame(columns=['Case', 'Cost of Change', 'VRG Cost', 'V1G Cost', 'V2G Cost', 'VRH Cost', 'HEMAS Net'])
@@ -27,7 +27,7 @@ def run_series():
 def run_multi():
     bigtic = time.time()
 
-    inputs_table = pd.read_excel('../Inputs/InputSchedule.xlsx')
+    inputs_table = pd.read_excel('../Inputs/InputSchedule2.xlsx')
     # inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
     result = Parallel(n_jobs=10)(delayed(ChargeController.main)(inputs_table.loc[row, :], row) for row in range(inputs_table.shape[0]))
     results = pd.DataFrame(result, columns=['Case', 'Cost of Change', 'VRG Cost', 'V1G Cost', 'V2G Cost', 'VRH Cost', 'HEMAS Net'])
