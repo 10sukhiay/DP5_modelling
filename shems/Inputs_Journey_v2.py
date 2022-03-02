@@ -15,14 +15,12 @@ journey_start = "Bristol, UK, BS8 2AB"
 journey_end = "Bristol, UK, BS1 2NJ"
 
 
-
 # def define_jounrey():
 #     API_KEY = 'AIzaSyC08mMBGKbKzHBZ2FX7JmUsv3Kh9KPkIPg'
 #     map_client = googlemaps.Client(API_KEY)
 #     journey_start = "Bristol, UK, BS8 2AB" # This should be read from input file
 #     journey_end = "Bristol, UK, BS1 2NJ" # This should be read from input file
 #     return API_KEY, map_client, journey_start, journey_end
-
 
 # initialising data files
 # Temp_2019 = pd.read_csv('temp_data_2019.csv')  # Temperature Data
@@ -36,7 +34,6 @@ dist_up = 150
 dist_down = 50
 
 charge_rate = 7.4  # kW [THIS IS AN EXAMPLE- VALUE SHOULD BE PROVIDED BY ADAM'S CODE]
-
 
 # Temperature
 temp = 9  # celcius
