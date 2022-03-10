@@ -6,7 +6,7 @@ Yazad Sukhia
 Feb 2022
 """
 
-# import required packages for use
+
 import time
 import pandas as pd
 import Inputs_Journey_v2 as inp
@@ -188,8 +188,8 @@ def charge_add(inputs):
 
 
 """
-The following functions are developed to call the group of functions above and simplify any requests the charge 
-controller makes for the energy requirement of a journey
+The following functions are developed to call the group of functions above (or combinations of the functions above that lead 
+to useful outputs) and so simplify any requests the charge controller makes for the energy requirement of a journey
 """
 
 
