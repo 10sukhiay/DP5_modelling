@@ -23,14 +23,13 @@ def main(arrival_time, departure_time, time_resolution, inputs):
     hour_ratio = hour_resolution / time_resolution
 
     IrradianceData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristol2.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
-    # test = IrradianceData.copy().resample(time_resolution)
-    MaskedIrradiance = IrradianceData[arrival_time: departure_time].copy()  # .interpolate().iloc[:-1, :]
-
+    MaskedIrradiance = IrradianceData[arrival_time: departure_time].copy()
     ## Temp ##
 
     Temperature = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
     # Temperature = Temperature.iloc[:,:-1]
     MaskedTemp = Temperature[arrival_time: departure_time].copy() # .resample(time_resolution).pad()  # .iloc[:-1, :]
+    MaskedTemp = MaskedTemp.iloc[: , :1]
     VaryTemp = (MaskedTemp - 25) * 0.00045
 
     Panel_Efficency = MaskedTemp.copy()
