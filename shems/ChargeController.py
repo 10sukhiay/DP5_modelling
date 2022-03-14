@@ -339,7 +339,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
     plt.subplot(512)
     plt.plot(charge_schedule_vrg['Price'], label='Price')
-    plt.plot(charge_schedule_v2g['Adjusted_Price'], label='Adjusted Price')
+    # plt.plot(charge_schedule_v2g['Adjusted_Price'], label='Adjusted Price')
     plt.plot(charge_schedule_v2g['Carbon Intensity'], label='Carbon Intensity')  # need to fix axis
     # plt.plot(charge_schedule_v2g['Virtual_Cost'], label='v2h cost')
     # plt.plot(charge_schedule_v2g['Virtual_Revenue'], label='v2h rev')
@@ -408,6 +408,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
     connection_extract.loc[connection_extract.index.max(), 'Price'] = kWh_export_fee / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
+    test2 = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].values
     connection_extract['Carbon Intensity'] = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].values
     connection_extract['Charge_In_Interval'] = 0
     connection_extract.loc[connection_extract.index.min(), 'SoC'] = plug_in_SoC
@@ -461,7 +462,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
 
 
 def main(inputs, row):
-    print('Test ' + str(row) + ' started')
+    print('Test ' + str(row + 2) + ' started')
     global charge_rate
     global battery_capacity
     global charger_efficiency
@@ -518,6 +519,7 @@ def main(inputs, row):
     smart_home = inputs['Smart Home']
     case = inputs['Case']
     cost_of_change = inputs['Cost of Change']
+    carbon_of_change = inputs['Change CO2e']
     battery_carbon_per_kWh = inputs['Battery Carbon per kWh']
     motivation = inputs['Battery Motivation']
     destination_arrival_time = pd.to_datetime(inputs['Destination Arrival Time'])
@@ -529,18 +531,26 @@ def main(inputs, row):
         # petrol_cost = jcharge.petrol_cost(inputs, False) + jcharge.petrol_cost(inputs, True)
         petrol_cost = 100  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
 
-        results = [case, cost_of_change,
-                   petrol_cost,
-                   petrol_cost,
-                   petrol_cost,
-                   petrol_cost,
-                   0]
+        cost_results = [case, cost_of_change,
+                        petrol_cost,
+                        petrol_cost,
+                        petrol_cost,
+                        petrol_cost,
+                        0]
+
+        carbon_results = [case, carbon_of_change,
+                          petrol_cost,
+                          petrol_cost,
+                          petrol_cost,
+                          petrol_cost,
+                          0]
+
+        output = [cost_results, carbon_results]
 
         toc = time.time()
-        print('Test ' + str(row) + ' done in {:.4f} seconds'.format(toc - tic))
-        print('--------------------------------------------------')
+        # print(' ICE Test ' + str(row + 2) + ' done in {:.4f} seconds'.format(toc - tic))
 
-        return results
+        return output
 
     if battery_mode == 'EV':
         # plug_out_time = jcharge.plug_out(inputs, False)
@@ -572,12 +582,19 @@ def main(inputs, row):
     calculate_running_carbon(v2h_charge_schedule)
     toc = time.time()
 
-    results = [case, cost_of_change,
+    cost_results = [case, cost_of_change,
                vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
                v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
                v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
                v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
                (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
+
+    carbon_results = [case, carbon_of_change,
+                      vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] + gas_cost,
+                      v1g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_cost,
+                      v2g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_cost,
+                      v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_cost,
+                      (vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] - v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1])]
 
     # print('Test ' + str(row) + ' results:')
     # print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
@@ -586,13 +603,14 @@ def main(inputs, row):
     # print('V2H virtual cost of connection period: ', v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)
     # print('HEMAS savings per day: ',
     #       (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))
-    print('Test ' + str(row) + ' done in {:.4f} seconds'.format(toc - tic))
+    print('Test ' + str(row + 2) + ' done in {:.4f} seconds'.format(toc - tic))
     print('--------------------------------------------------')
 
     plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, v2hg_charge_schedule, case, row)
 
-    return results
+    output = [cost_results, carbon_results]
 
+    return output
 
 
 """Inputs from researched data. IDEA: make readable as .txt batch files"""
