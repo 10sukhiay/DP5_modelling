@@ -88,7 +88,7 @@ def initialise_api_data(inputs, reserve_journey):
     payload = {}
     headers = {}
     response = requests.request("GET", url, headers=headers, data=payload)
-    # print(response.text)
+    print(response.text)
     return response
 
 

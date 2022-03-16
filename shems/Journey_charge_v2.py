@@ -256,8 +256,8 @@ def journey_carbon_cost(inputs, reserve_journey):
 
 
 def journey_cost(inputs, reserve_journey):
-    """Determines the cost any journey specified; toggles between vehicle selections; where vehicle_select = 1 & 2 refer
-    to EVs while = 3 refers to the use of an ICE"""
+    """Determines the cost of any journey specified; toggles between vehicle selections; where vehicle_select = 1 & 2
+    refers to EVs while = 3 refers to the use of an ICE"""
     journey_price = 0
     vehicle_select = inputs['Vehicle Type']
     petrol_cost = inputs['p per litre']
