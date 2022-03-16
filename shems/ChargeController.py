@@ -419,10 +419,10 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
         connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
 
     if appliance_forecast:
-        connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
-        # connection_extract['Appliance_Power'] = home_power_raw[
-        #                                          plug_in_time.replace(year=2019): plug_out_time.replace(
-        #                                              year=2019)].values
+        # connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
+        connection_extract['Appliance_Power'] = home_power_raw[
+                                                 plug_in_time.replace(year=2019): plug_out_time.replace(
+                                                     year=2019)].values
 
         # test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
         # poc = time.time()
@@ -433,7 +433,9 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
                                                                 inputs).values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
             connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_price
+            gas_carbon = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_c_intenisty
             total_gas_cost = gas_cost.cumsum()[-1]
+            total_gas_carbon = gas_carbon.cumsum()[-1]
         else:
             if heating_type == 'Electric':
                 connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019),
@@ -451,14 +453,16 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
                 print('Error: heat type input invalid')
             connection_extract['Home_Power'] = connection_extract['Appliance_Power'] + connection_extract['Heating_Power']  # - connection_extract['Solar_Power']
             total_gas_cost = 0
+            total_gas_carbon = 0
     else:
         connection_extract['Appliance_Power'] = connection_extract['Price'] * 0  # BODGE
         connection_extract['Heating_Power'] = connection_extract['Price'] * 0  # BODGE
         connection_extract['Home_Power'] = connection_extract['Price'] * 0  # BODGE
         total_gas_cost = 0
+        total_gas_carbon = 0
 
 
-    return connection_extract, total_gas_cost
+    return connection_extract, total_gas_cost, total_gas_carbon
 
 
 def main(inputs, row):
@@ -484,6 +488,7 @@ def main(inputs, row):
     global battery_mode
     global heating_type
     global gas_price
+    global gas_c_intenisty
     global gas_efficiency
     global smart_home
     global case
@@ -515,6 +520,7 @@ def main(inputs, row):
     battery_mode = inputs['Battery Mode']  # EV or Home
     heating_type = inputs['Heating Type']
     gas_price = inputs['Gas Price']  # 3.8 p
+    gas_c_intenisty = inputs['Gas Carbon Intensity']  # 3.8 p
     gas_efficiency = inputs['Gas Efficiency']
     smart_home = inputs['Smart Home']
     case = inputs['Case']
@@ -561,7 +567,7 @@ def main(inputs, row):
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
 
     """Main body of code"""
-    zeros_charge_schedule, gas_cost = initialise_charge_schedule(smart_home, heating_type,inputs)
+    zeros_charge_schedule, gas_cost, gas_carbon = initialise_charge_schedule(smart_home, heating_type, inputs)
 
     # plt.plot(zeros_charge_schedule['Home_Power'], label='Home Power')
     # plt.show()
@@ -592,10 +598,10 @@ def main(inputs, row):
                (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
 
     carbon_results = [case, carbon_of_change,
-                      vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] + gas_cost,
-                      v1g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_cost,
-                      v2g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_cost,
-                      v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_cost,
+                      vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
+                      v1g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
+                      v2g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
+                      v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
                       (vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] - v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1])]
 
     # print('Test ' + str(row) + ' results:')
