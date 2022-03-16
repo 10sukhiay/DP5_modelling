@@ -402,10 +402,10 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     Tempno = 0
     
     OutsideTempData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
+    OutsideTempData = OutsideTempData.iloc[: , :2]
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
-    MaskedOutsideTemp = MaskedOutsideTemp + 1
 
-    Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
+    Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
     Inside_Temp = inputs['Inside Temp']
     Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
@@ -451,7 +451,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
             
-            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
+            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
             Outside_Temp_Change = Inside_Temp - Outside_Temp
             test = 0
             
@@ -505,7 +505,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
             
         else:
 
-            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
+            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
             Outside_Temp_Change = Inside_Temp - Outside_Temp
             test = 1
             
