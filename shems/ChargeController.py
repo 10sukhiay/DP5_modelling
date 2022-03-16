@@ -323,7 +323,7 @@ def virtual_carbon_cost(charge_schedule, charger_type):
     return charge_schedule
 
 
-def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, charge_schedule_v2hg, case, row):
+def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, charge_schedule_v2h, charge_schedule_v2hg, case, row, descrp):
     """Plot DP4 equivalent figures"""
 
     fig = plt.figure(figsize=(20, 15), dpi=100)
@@ -379,8 +379,8 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
     # plt.autoscale()
     # plt.title('Test: ' + str(number))  # Doesn't work
-    fig.suptitle('Row: ' + str(row + 2) + ', Case: ' + str(case))
-    fig.savefig('../Results/Figures/' + str(row + 2) + ' ' + str(case))
+    fig.suptitle('Row: ' + str(row + 2) + ', Case: ' + str(case) + ', ' + descrp)
+    fig.savefig('../Results/Figures/' + str(row + 2) + ' ' + str(case) + ', ' + descrp)
     fig.clf()
 
     # plt.show()
@@ -419,13 +419,13 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
         connection_extract['Solar_Power'] = connection_extract['Price'] * 0  # BODGE
 
     if appliance_forecast:
-        # connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
-        connection_extract['Appliance_Power'] = home_power_raw[
-                                                 plug_in_time.replace(year=2019): plug_out_time.replace(
-                                                     year=2019)].values
+        connection_extract['Appliance_Power'] = ApplianceDemand.main(plug_in_time, plug_out_time).resample(time_resolution).mean()  # [1:]
+        # connection_extract['Appliance_Power'] = home_power_raw[
+        #                                          plug_in_time.replace(year=2019): plug_out_time.replace(
+        #                                              year=2019)].values
 
-        test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
-        poc = time.time()
+        # test5 = Heat.mainElec(plug_in_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
+        # poc = time.time()
         # connection_extract['Heating_Power_ASHP'] = Heat.mainASHP(plug_in_time, plug_out_time, time_resolution)
         if heating_type == 'Gas':
             connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019),
@@ -518,6 +518,7 @@ def main(inputs, row):
     gas_efficiency = inputs['Gas Efficiency']
     smart_home = inputs['Smart Home']
     case = inputs['Case']
+    descp = inputs['Description']
     cost_of_change = inputs['Cost of Change']
     carbon_of_change = inputs['Change CO2e']
     battery_carbon_per_kWh = inputs['Battery Carbon per kWh']
@@ -528,8 +529,9 @@ def main(inputs, row):
     tic = time.time()
 
     if battery_mode == 'ICE':  # WARNING not obvious but this short circuits the program. Makes all other inputs irrelevant
-        # petrol_cost = jcharge.petrol_cost(inputs, False) + jcharge.petrol_cost(inputs, True)
-        petrol_cost = 100  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
+        petrol_cost = jcharge.petrol_cost(inputs, False) + jcharge.petrol_cost(inputs, True)
+        petrol_carbon = (jcharge.journey_carbon_cost(inputs, False) + jcharge.journey_carbon_cost(inputs, True))*1000
+        # petrol_cost = 100  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
 
         cost_results = [case, cost_of_change,
                         petrol_cost,
@@ -539,10 +541,10 @@ def main(inputs, row):
                         0]
 
         carbon_results = [case, carbon_of_change,
-                          petrol_cost,
-                          petrol_cost,
-                          petrol_cost,
-                          petrol_cost,
+                          petrol_carbon,
+                          petrol_carbon,
+                          petrol_carbon,
+                          petrol_carbon,
                           0]
 
         output = [cost_results, carbon_results]
@@ -606,7 +608,7 @@ def main(inputs, row):
     print('Test ' + str(row + 2) + ' done in {:.4f} seconds'.format(toc - tic))
     print('--------------------------------------------------')
 
-    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, v2hg_charge_schedule, case, row)
+    plot_vr12g(vrg_charge_schedule_max, v1g_charge_schedule, v2g_charge_schedule, v2h_charge_schedule, v2hg_charge_schedule, case, row, descp)
 
     output = [cost_results, carbon_results]
 
