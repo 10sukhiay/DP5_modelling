@@ -15,15 +15,15 @@ import pandas as pd
 
 def main(inputs, reserve_journey):
     response = initialise_api_data(inputs, reserve_journey)
-    print(response.text)
+    #print(response.text)
     journey_start = journey_origin(inputs)
     journey_end = journey_destination(inputs, reserve_journey)
     time_minutes = journey_time(inputs, reserve_journey)
-    print("Journey from", journey_start, "to", journey_end, "will take", time_minutes, "minutes")
+    #print("Journey from", journey_start, "to", journey_end, "will take", time_minutes, "minutes")
     ttime_minutes = journey_time_traffic(inputs, reserve_journey)
-    print("Journey from", journey_start, "to", journey_end, "will take", ttime_minutes, "in traffic")
+   #print("Journey from", journey_start, "to", journey_end, "will take", ttime_minutes, "in traffic")
     distance_km = journey_distance(inputs, reserve_journey)
-    print("Journey from", journey_start, "to", journey_end, "will traverse", distance_km, "km")
+    #print("Journey from", journey_start, "to", journey_end, "will traverse", distance_km, "km")
     return
 
 
@@ -88,7 +88,7 @@ def initialise_api_data(inputs, reserve_journey):
     payload = {}
     headers = {}
     response = requests.request("GET", url, headers=headers, data=payload)
-    print(response.text)
+    #print(response.text)
     return response
 
 
