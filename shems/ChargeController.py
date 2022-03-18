@@ -408,8 +408,8 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
     connection_extract_mean_price = connection_extract['Price'].mean()
     connection_extract['Price'] = (connection_extract['Price'] - connection_extract_mean_price) * price_volatility_factor + connection_extract_mean_price
     connection_extract.loc[connection_extract.index.max(), 'Price'] = kWh_export_fee / charger_efficiency  # offset v1g and vrg revenue to 0 - this is kind of a hack
-    test2 = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].values
-    connection_extract['Carbon Intensity'] = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].values
+    # test2 = carbon_intensity[plug_in_time.replace(year=2021): plug_out_time.replace(year=2021)].values
+    connection_extract['Carbon Intensity'] = carbon_intensity[plug_in_time.replace(year=2019): plug_out_time.replace(year=2019)].values
     connection_extract['Charge_In_Interval'] = 0
     connection_extract.loc[connection_extract.index.min(), 'SoC'] = plug_in_SoC
 
