@@ -593,18 +593,18 @@ def main(inputs, row):
     test2year = 52 / 12  # from 12 sample weeks to 52 weeks in a year
 
     cost_results = [case, cost_of_change,
-                    test2year * vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost,
-                    test2year * v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
-                    test2year * v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
-                    test2year * v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost,
-                    test2year * (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1])]
+                    (test2year * vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)/100,
+                    (test2year * v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
+                    (test2year * v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
+                    (test2year * v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
+                    (test2year * (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))/100]
 
     carbon_results = [case, carbon_of_change,
-                      test2year * vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
-                      test2year * v1g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
-                      test2year * v2g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
-                      test2year * v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon,
-                      test2year * (vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] - v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1])]
+                    (test2year * vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
+                    (test2year * v1g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
+                    (test2year * v2g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
+                    (test2year * v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
+                    (test2year * (vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] - v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1]))/1000]
 
     # print('Test ' + str(row) + ' results:')
     # print('VRG virtual cost of connection period: ', vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)
