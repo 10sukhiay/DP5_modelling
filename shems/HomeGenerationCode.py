@@ -22,14 +22,18 @@ def main(arrival_time, departure_time, time_resolution, inputs):
     hour_resolution = pd.Timedelta('60 min')
     hour_ratio = hour_resolution / time_resolution
 
-    IrradianceData = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristol2.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
-    MaskedIrradiance = IrradianceData[arrival_time: departure_time].copy()
-    ## Temp ##
+    IrradianceData1 = pd.read_csv(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristol3.csv')
+    IrradianceData1['Datetime'] = pd.to_datetime(IrradianceData1['Datetime'])
+    IrradianceData1 = IrradianceData1.set_index("Datetime").resample(time_resolution).interpolate()
+    MaskedIrradiance = IrradianceData1[arrival_time: departure_time].copy()
 
-    Temperature = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
-    # Temperature = Temperature.iloc[:,:-1]
-    MaskedTemp = Temperature[arrival_time: departure_time].copy() # .resample(time_resolution).pad()  # .iloc[:-1, :]
-    MaskedTemp = MaskedTemp.iloc[: , :1]
+    Temperature = pd.read_csv(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristoltemp.csv')
+    Temperature['Datetime'] = pd.to_datetime(Temperature['Datetime'])
+    Temperature = Temperature.set_index("Datetime").resample(time_resolution).interpolate()
+    MaskedTemp = Temperature[arrival_time: departure_time].copy()
+
+    #Temperature = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0).resample(time_resolution).interpolate()
+    #MaskedTemp = Temperature[arrival_time: departure_time].copy() # .resample(time_resolution).pad()  # .iloc[:-1, :]
     VaryTemp = (MaskedTemp - 25) * 0.00045
 
     Panel_Efficency = MaskedTemp.copy()
@@ -39,7 +43,6 @@ def main(arrival_time, departure_time, time_resolution, inputs):
     Month_Area = MaskedIrradiance * Panel_Area
     Time_Generation = Month_Area * System_Efficency * TempCoeff.values / 1000
     Time_Total = Time_Generation.sum() / hour_ratio
-
     return Time_Generation.values
 
 # Generation_Text ='Your gerneration over this period could be ', int(Time_Total), 'kWhs';
