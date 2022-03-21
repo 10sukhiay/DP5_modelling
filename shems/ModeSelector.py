@@ -27,7 +27,7 @@ def run_series():
 def run_multi():
     bigtic = time.time()
 
-    inputs_table = pd.read_excel('../Inputs/InputScheduleCombinations2.xlsx')
+    inputs_table = pd.read_excel('../Inputs/InputSchedule5.xlsx')
     # inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
     results = Parallel(n_jobs=10)(delayed(ChargeController.main)(inputs_table.loc[row, :], row) for row in range(inputs_table.shape[0]))
     flat_list = [item for sublist in results for item in sublist]  # yet another bodge
@@ -76,9 +76,8 @@ def pcs(TBM_results, mode):
 
     PCS_annum_difference = datum_values - all_values + 0.000001  # BODGE to avoid /0 error
     PCS_five_years = (5 * all_values).add(change_cost.tolist(), axis='index')
-    test2year = 52 / 12  # from 12 sample weeks to 52 weeks in a year
 
-    PCSrecip = 1 / (PCS_annum_difference * test2year)
+    PCSrecip = 1 / (PCS_annum_difference)
     PCS_payback_years = PCSrecip.mul(change_cost, axis=0)
 
     PCS_payback_years.rename({'VRG ' + mode: 'VRG Payback', 'V1G ' + mode: 'V1G Payback', 'V2G ' + mode: 'V2G Payback', 'VRH ' + mode: 'VRH Payback'}, axis=1, inplace=True)
