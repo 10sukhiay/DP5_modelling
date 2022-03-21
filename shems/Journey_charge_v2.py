@@ -21,6 +21,10 @@ def main():
     inputs = pd.read_excel('../Inputs/Yaz_Journey_API_inputs_data.xlsx').iloc[0, :]
     results_journey(inputs, False)
     charge_time = time_charge(inputs, False)
+    distance_km = API.journey_distance
+    print(distance_km)
+    traffic_time = API.journey_time_traffic
+    print(traffic_time)
     # print(charge_time)
     # display_results() # this is added after display_results() has been formed
     end_time = time.time()
@@ -232,6 +236,11 @@ The following functions are developed to evaluate the cost of individual journey
 """
 
 
+def mpg_ice(inputs):
+
+
+
+
 def petrol_cost(inputs, reserve_journey):
     """Determines what the cost of fuel would be for the duration of the specified journey assuming an ICE is used"""
     plug_out_time = plug_out(inputs, reserve_journey)
@@ -262,6 +271,7 @@ def journey_cost(inputs, reserve_journey):
     journey_price = 0
     vehicle_select = inputs['Vehicle Type']
     petrol_cost = inputs['p per litre']
+    # MPG = def mpg_ice
     l_per_km = (2.35215 / inputs['MPG'])
     petrol_consump_rate = l_per_km
     elec_cost = inp.kwh_cost

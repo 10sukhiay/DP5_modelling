@@ -14,8 +14,8 @@ import pandas as pd
 
 
 def main(inputs, reserve_journey):
-    response = initialise_api_data(inputs, reserve_journey)
-    print(response.text)
+    # response = initialise_api_data(inputs, reserve_journey)
+    # print(response.text)
     journey_start = journey_origin(inputs)
     journey_end = journey_destination(inputs, reserve_journey)
     time_minutes = journey_time(inputs, reserve_journey)
@@ -88,7 +88,7 @@ def initialise_api_data(inputs, reserve_journey):
     payload = {}
     headers = {}
     response = requests.request("GET", url, headers=headers, data=payload)
-    print(response.text)
+    # print(response.text)
     return response
 
 
