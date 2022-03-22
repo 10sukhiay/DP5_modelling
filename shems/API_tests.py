@@ -13,16 +13,19 @@ import requests
 import pandas as pd
 
 
-def main(inputs, reserve_journey):
+def main():
+    inputs = pd.read_excel('../Inputs/Yaz_Journey_API_inputs_data.xlsx').iloc[0, :]
     # response = initialise_api_data(inputs, reserve_journey)
     # print(response.text)
     journey_start = journey_origin(inputs)
-    journey_end = journey_destination(inputs, reserve_journey)
-    time_minutes = journey_time(inputs, reserve_journey)
+    journey_end = journey_destination(inputs, False)
+    time_optimistic = journey_time_optimist(inputs, False)
+    print("Journey from", journey_start, "to", journey_end, "will take", time_optimistic, "minutes optimistically")
+    time_minutes = journey_time(inputs, False)
     print("Journey from", journey_start, "to", journey_end, "will take", time_minutes, "minutes")
-    ttime_minutes = journey_time_traffic(inputs, reserve_journey)
-    print("Journey from", journey_start, "to", journey_end, "will take", ttime_minutes, "in traffic")
-    distance_km = journey_distance(inputs, reserve_journey)
+    ttime_minutes = journey_time_traffic(inputs, False)
+    print("Journey from", journey_start, "to", journey_end, "will take", ttime_minutes, "minutes in traffic")
+    distance_km = journey_distance(inputs, False)
     print("Journey from", journey_start, "to", journey_end, "will traverse", distance_km, "km")
     return
 
@@ -130,6 +133,47 @@ def journey_time_traffic(inputs, reserve_journey):
     traffic_time = pd.Timedelta(str(response.json()["rows"][0]["elements"][0]["duration_in_traffic"]["value"]) + 's')
     # traffic_time_minutes = round((traffic_time / 60), 2)
     return traffic_time
+
+
+"""
+The following functions are only to be used to calculate route optimistic travel times- they are not called by the 
+charge controller and are specific to the traffic condition simulation under the journey module used in the caclulation 
+in the shifted charge and mpg values for EVs and ICEs respectively 
+"""
+
+
+def initialise_api_data_optimistic(inputs, reserve_journey):  # Only to be used in the optimistic case
+    """Function is called whenever the API is required, establishes link between the script and the google maps API"""
+    api_key = 'AIzaSyCsNLYOColvC8uLS7EeNMRi5nK1kr_KSp8'
+    journey_start = journey_origin(inputs)
+    journey_end = journey_destination(inputs, reserve_journey)
+    departure_time = pd.to_datetime('2022-04-29 17:00:00')
+    datum_time = pd.to_datetime('1970-01-01 00:00:00')
+    one_s = pd.Timedelta("1 s")
+    departure_time_s = int((departure_time - datum_time) / one_s)
+    traffic_model = 'optimistic'
+    url = ('https://maps.googleapis.com/maps/api/distancematrix/json'
+           + '?language=en-US&units=imperial'
+           + '&origins={}'
+           + '&destinations={}'
+           + '&key={}'
+           + '&departure_time={}'
+           + '&traffic_model={}'
+           ).format(journey_start, journey_end, api_key, departure_time_s, traffic_model)
+    payload = {}
+    headers = {}
+    response = requests.request("GET", url, headers=headers, data=payload)
+    # print(response.text)
+    return response
+
+
+def journey_time_optimist(inputs, reserve_journey):
+    """"Uses the generated API response from the input journey to calculate and return the time taken to travel along
+    the generated google maps driving route discounting the inclusion of traffic along the route"""
+    response = initialise_api_data_optimistic(inputs, reserve_journey)
+    time_seconds_opt = response.json()["rows"][0]["elements"][0]["duration"]["value"]
+    time_minutes_opt = round(time_seconds_opt / 60, 2)
+    return time_minutes_opt
 
 
 if __name__ == "__main__":

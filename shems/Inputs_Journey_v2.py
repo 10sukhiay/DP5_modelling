@@ -97,5 +97,5 @@ regen = [1.28, 1]
 MPG_fiesta = 46.8
 p_per_litre = 143 # defines price of petrol per litre (in pence)
 l_per_km = (2.35215/ MPG_fiesta) # defines how many litres are required per km of travel- conversion from MPG
-kwh_cost = 28 # average cost per kwh of electricity to charge the vehicle (provided from adams code)
+kwh_cost = 18.9 # average cost per kwh of electricity to charge the vehicle (provided from adams code)
 

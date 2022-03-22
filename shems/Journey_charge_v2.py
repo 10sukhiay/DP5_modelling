@@ -19,14 +19,15 @@ import os
 def main():
     start_time = time.time()
     inputs = pd.read_excel('../Inputs/Yaz_Journey_API_inputs_data.xlsx').iloc[0, :]
+    mpg_temp_shift(inputs, False)
     results_journey(inputs, False)
     charge_time = time_charge(inputs, False)
     distance_km = API.journey_distance
     print(distance_km)
     traffic_time = API.journey_time_traffic
     print(traffic_time)
-    # print(charge_time)
-    # display_results() # this is added after display_results() has been formed
+    print(charge_time)
+    # display_results()  # this is added after display_results() has been formed
     end_time = time.time()
     print('Completed in {:.4f} seconds'.format(end_time - start_time))
     return charge_time
@@ -117,8 +118,8 @@ def rain(inputs, reserve_journey):
     to find precipitation level at the time of journey. Severity is classified in banded groups ranging from NONE,
     LIGHT, MILD, HEAVY"""
     plug_out_time = plug_out(inputs, reserve_journey)
-    precipdata = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Precipitation_data_uk_2021.xlsx', parse_dates=[0], index_col=0)
-    rain_effect = precipdata[plug_out_time.replace(year=2021):plug_out_time.replace(year=2021) + pd.Timedelta('1 day')].copy().iloc[0, 1]
+    precipdata = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Precipitation_data_uk_2019.xlsx', parse_dates=[0], index_col=0)
+    rain_effect = precipdata[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 day')].copy().iloc[0, 1]
     return rain_effect
 
 
@@ -228,25 +229,65 @@ def results_journey(inputs, reserve_journey):
 
 
 """
+The following functions are developed to work out the effect of journey characteristics on ICE fuel efficiency. The main
+contributing factors are external ambient temperature and traffic conditions along the journey route. Traffic conditions
+are evaluated using a GoogleMaps API called from the API_tests script and requires an input origin and destination  
+"""
+
+
+def trip_length_band(inputs, reserve_journey):
+    """Defines if the trip considered is a 'short' or 'long' trip; short trips are considered under 4 miles"""
+    short_trip_cutoff = 4 * 1.609  # converts 4 miles into km, below this value is defined as a short trip
+    distance_km = API.journey_distance(inputs, reserve_journey)
+    if distance_km <= short_trip_cutoff:
+        short_trip = True
+    else:
+        short_trip = False
+    return short_trip
+
+
+def mpg_temp_shift(inputs, reserve_journey):
+    """Assigns a shifted fuel efficiency to an ICE completing the journey specified. Short trips in colder ambient
+    temperatures have a greater fuel efficiency reduction due to the percentage time of the journey required to heat up
+    the engine to optimal operating temperature"""
+    plug_out_time = plug_out(inputs, reserve_journey)
+    td = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
+    mpg_temperature = td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 0]
+    # mpg_temp = TempData[plug_out_time:plug_out_time + pd.Timedelta('1 h')].copy().iloc[0, 0]
+    # mpg_temp = inputs['Temperature']
+    short_trips = trip_length_band(inputs, reserve_journey)
+    if short_trips == False:
+        mpg_temp_effect = (1-((21.1-mpg_temperature) * 0.0045))
+    else:
+        mpg_temp_effect = (1-((21.1-mpg_temperature) * 0.0072))
+    return mpg_temp_effect
+
+
+def mpg_ice(inputs, reserve_journey):
+    """Calculates a shifted fuel efficiency based on the calculated effects of individual journey characteristics"""
+    initial_mpg = inputs['MPG']
+    temp_effect_mpg = mpg_temp_shift(inputs, reserve_journey)
+    shifted_mpg = initial_mpg * temp_effect_mpg
+    return shifted_mpg
+
+
+"""
 The following functions are developed to evaluate the cost of individual journeys in terms of both:
 
     Financial Cost (£)          ---   
     Carbon Cost (Kg Co2)        ---  
     
+Data on petrol costs throughout the year is sourced from https://www.gov.uk/government/statistics/weekly-road-fuel-prices
 """
-
-
-def mpg_ice(inputs):
-
-
 
 
 def petrol_cost(inputs, reserve_journey):
     """Determines what the cost of fuel would be for the duration of the specified journey assuming an ICE is used"""
     plug_out_time = plug_out(inputs, reserve_journey)
-    petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2021_data_petrol_price.xlsx', parse_dates=[0], index_col=0)
-    p_per_litre = petrol_price_data[plug_out_time.replace(year=2021):plug_out_time.replace(year=2021) + pd.Timedelta(days=7)].copy().iloc[0, 0]
-    l_per_km = (2.35215 / inputs['MPG'])  # in litres per km
+    petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2019_data_petrol_price.xlsx', parse_dates=[0], index_col=0)
+    p_per_litre = petrol_price_data[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta(days=7)].copy().iloc[0, 1]
+    mpg = mpg_ice(inputs, reserve_journey)
+    l_per_km = (2.35215 / mpg)  # in litres per km
     petrol_consump_rate = l_per_km
     petrol_cost = p_per_litre     # CAN USE inputs['p per litre'] INSTEAD FROM INPUT FILE
     petrol_p_per_km = petrol_consump_rate * petrol_cost
@@ -257,7 +298,8 @@ def petrol_cost(inputs, reserve_journey):
 def journey_carbon_cost(inputs, reserve_journey):
     """Determines the Co2 used (in kg) during the specified journey based on the mass of fuel required to complete the
     journey assuming an ICE is used"""
-    l_per_km = (2.35215 / inputs['MPG'])  # in litres per km
+    mpg = mpg_ice(inputs, reserve_journey)
+    l_per_km = (2.35215 / mpg)  # in litres per km
     petrol_consump_rate = l_per_km
     kg_carbon_per_litre = inputs['Carbon Kg per litre Fuel']
     petrol_co2_per_km = petrol_consump_rate * kg_carbon_per_litre
@@ -271,8 +313,8 @@ def journey_cost(inputs, reserve_journey):
     journey_price = 0
     vehicle_select = inputs['Vehicle Type']
     petrol_cost = inputs['p per litre']
-    # MPG = def mpg_ice
-    l_per_km = (2.35215 / inputs['MPG'])
+    mpg = mpg_ice(inputs, reserve_journey)
+    l_per_km = (2.35215 / mpg)
     petrol_consump_rate = l_per_km
     elec_cost = inp.kwh_cost
     if vehicle_select == 1 or vehicle_select == 2:
