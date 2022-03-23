@@ -1,5 +1,5 @@
 """
-Contains inputs needed to work out charge demand requirment for an EV
+Contains inputs needed to work out charge demand requirement for an EV
 
 Yazad Sukhia
 Feb 2022
@@ -15,7 +15,7 @@ journey_start = "Bristol, UK, BS8 2AB"
 journey_end = "Bristol, UK, BS1 2NJ"
 
 
-# def define_jounrey():
+# def define_journey():
 #     API_KEY = 'AIzaSyC08mMBGKbKzHBZ2FX7JmUsv3Kh9KPkIPg'
 #     map_client = googlemaps.Client(API_KEY)
 #     journey_start = "Bristol, UK, BS8 2AB" # This should be read from input file
@@ -36,7 +36,7 @@ dist_down = 50
 charge_rate = 7.4  # kW [THIS IS AN EXAMPLE- VALUE SHOULD BE PROVIDED BY ADAM'S CODE]
 
 # Temperature
-temp = 9  # celcius
+temp = 9  # Celsius
 
 # vehicle = 1
 # # Vehicle 1 - Tesla Model 3
@@ -93,9 +93,8 @@ regen = [1.28, 1]
 # regen_on = 1.28
 # regen_off = 1
 
-#fuel cost
+# fuel cost
 MPG_fiesta = 46.8
-p_per_litre = 143 # defines price of petrol per litre (in pence)
-l_per_km = (2.35215/ MPG_fiesta) # defines how many litres are required per km of travel- conversion from MPG
-kwh_cost = 18.9 # average cost per kwh of electricity to charge the vehicle (provided from adams code)
-
+p_per_litre = 143  # defines price of petrol per litre (in pence)
+l_per_km = (2.35215 / MPG_fiesta)  # defines how many litres are required per km of travel- conversion from MPG
+kwh_cost = 18.9  # average cost per kwh of electricity to charge the vehicle (provided from adams code)
