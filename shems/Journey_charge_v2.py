@@ -246,7 +246,7 @@ def results_journey(inputs, reserve_journey):
 """
 The following functions are developed to work out the effect of journey characteristics on ICE fuel efficiency. The main
 contributing factors are external ambient temperature and traffic conditions along the journey route. Traffic conditions
-are evaluated using a GoogleMaps API called from the API_tests script and requires an input origin and destination  
+are evaluated using a GoogleMaps API called from the API_tests script and require an input origin and destination  
 """
 
 
@@ -267,9 +267,9 @@ def trip_length_band(inputs, reserve_journey):
     short_trip_cutoff = 4 * 1.609  # converts 4 miles into km, below this value is defined as a short trip
     distance_km = API.journey_distance(inputs, reserve_journey)
     if distance_km <= short_trip_cutoff:
-        short_trip = True
+        short_trip = 'True'
     else:
-        short_trip = False
+        short_trip = 'False'
     return short_trip
 
 
@@ -295,7 +295,7 @@ def mpg_temp_shift(inputs, reserve_journey):
     # mpg_temp = TempData[plug_out_time:plug_out_time + pd.Timedelta('1 h')].copy().iloc[0, 0]
     # mpg_temp = inputs['Temperature']
     short_trips = trip_length_band(inputs, reserve_journey)
-    if short_trips == False:
+    if short_trips == 'False':
         mpg_temp_effect = (1-((21.1-mpg_temperature) * 0.0045))
     else:
         mpg_temp_effect = (1-((21.1-mpg_temperature) * 0.0072))
@@ -329,8 +329,8 @@ def petrol_cost(inputs, reserve_journey):
     mpg = mpg_ice(inputs, reserve_journey)
     l_per_km = (2.35215 / mpg)  # in litres per km
     petrol_consump_rate = l_per_km
-    petrol_cost = p_per_litre     # CAN USE inputs['p per litre'] INSTEAD FROM INPUT FILE
-    petrol_p_per_km = petrol_consump_rate * petrol_cost
+    petrol_costs = p_per_litre     # CAN USE inputs['p per litre'] INSTEAD FROM INPUT FILE
+    petrol_p_per_km = petrol_consump_rate * petrol_costs
     journey_petrol_price = API.journey_distance(inputs, reserve_journey) * petrol_p_per_km
     return journey_petrol_price
 
@@ -352,7 +352,7 @@ def journey_cost(inputs, reserve_journey):
     refers to EVs while = 3 refers to the use of an ICE"""
     journey_price = 0
     vehicle_select = inputs['Vehicle Type']
-    petrol_cost = inputs['p per litre']
+    petrol_costs = inputs['p per litre']
     mpg = mpg_ice(inputs, reserve_journey)
     l_per_km = (2.35215 / mpg)
     petrol_consump_rate = l_per_km
@@ -361,7 +361,7 @@ def journey_cost(inputs, reserve_journey):
         final_charge_kwh = final_kwh(inputs, reserve_journey)
         journey_price = final_charge_kwh * elec_cost
     elif vehicle_select == 3:
-        petrol_p_per_km = petrol_consump_rate * petrol_cost
+        petrol_p_per_km = petrol_consump_rate * petrol_costs
         journey_price = API.journey_distance(inputs, reserve_journey) * petrol_p_per_km
     return journey_price
 
