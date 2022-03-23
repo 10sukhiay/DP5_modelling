@@ -22,12 +22,12 @@ def main():
     mpg_temp_shift(inputs, False)
     results_journey(inputs, False)
     charge_time = time_charge(inputs, False)
+    print(charge_time)
     distance_km = API.journey_distance
     print(distance_km)
     traffic_time = API.journey_time_traffic
     print(traffic_time)
-    print(charge_time)
-    # display_results()  # this is added after display_results() has been formed
+    # display_results()  # this is to be added after display_results() has been formed to graph results
     end_time = time.time()
     print('Completed in {:.4f} seconds'.format(end_time - start_time))
     return charge_time
@@ -79,7 +79,8 @@ provided by historical data and is read based on a user input for date of journe
     
     Precipitation                        --- https://www.metoffice.gov.uk/hadobs/hadukp/data/download.html
                                              Met Office Data 
-    External Temperature                 ---
+    External Temperature                 --- https://re.jrc.ec.europa.eu/pvg_tools/en/#HR
+                                             EU Science Hub Data- Photovoltaic Geographical Information System (PVGIS)
 """
 
 
@@ -138,6 +139,18 @@ def temp(inputs, reserve_journey):
     return temp_effect
 
 
+def range_traffic_shift(inputs, reserve_journey):
+    """Assigns a shifted range value to an EV completing the journey specified based on traffic conditions."""
+    journey_vel = avg_journey_vel(inputs, reserve_journey)
+    if journey_vel <= 50:
+        traffic_effect = (1-((50-journey_vel) * 0.0023))  # quantifies reduction in effective range below 50km/h
+    elif journey_vel >= 80:
+        traffic_effect = (1-((journey_vel-80) * 0.000415))  # quantifies reduction in effective range above 80 km/h
+    else:
+        traffic_effect = 1  # assumes EV optimal operating range is between 50-80km/h
+    return traffic_effect
+
+
 """
 The following functions are developed to work out the amount of charge that a user-specified journey will require to 
 complete. Trip distance is calculated by a google maps API called from the API_tests script and requires an input origin
@@ -167,7 +180,9 @@ def shift_charge(inputs, reserve_journey):
     cool_effect = cooling(inputs, reserve_journey)
     rain_effect = rain(inputs, reserve_journey)
     temp_effect = temp(inputs, reserve_journey)
-    range_shift = (heat_effect * cool_effect * inputs['Driving Style'] * inputs["Regen Braking"] * rain_effect * temp_effect)
+    traffic_effect = range_traffic_shift(inputs, reserve_journey)
+    range_shift = (heat_effect * cool_effect * inputs['Driving Style'] * inputs["Regen Braking"]
+                   * rain_effect * temp_effect * traffic_effect)
     # print(inp.rain[1])
     # print(inp.heating[0])
     # print(inp.cooling[0])
@@ -194,8 +209,8 @@ def charge_add(inputs):
 
 
 """
-The following functions are developed to call the group of functions above (or combinations of the functions above that lead 
-to useful outputs) and so simplify any requests the charge controller makes for the energy requirement of a journey
+The following functions are developed to call the group of functions above (or combinations of the functions above that 
+lead to useful outputs) and so simplify any requests the charge controller makes for the energy requirement of a journey
 """
 
 
@@ -235,6 +250,18 @@ are evaluated using a GoogleMaps API called from the API_tests script and requir
 """
 
 
+def avg_journey_vel(inputs, reserve_journey):
+    """Defines the average velocity [in km/h] of travel during the journey. This takes 'optimistic' traffic mode
+    estimations (i.e considering the least amount of traffic as possible) and assumes that the vehicle is moving for a
+    specified % of this time, as per the moving_ratio- the rest of the time is assumed to be stopped at lights/
+    intersections"""
+    journey_dist_km = API.journey_distance(inputs, reserve_journey)
+    journey_time_opt_hours = round((API.journey_time_optimist(inputs, reserve_journey) / 60), 2)
+    moving_ratio = 0.95  # This should really be read from inputs file as is specific to each defined journey
+    journey_avg_vel = journey_dist_km / (journey_time_opt_hours * moving_ratio)
+    return journey_avg_vel
+
+
 def trip_length_band(inputs, reserve_journey):
     """Defines if the trip considered is a 'short' or 'long' trip; short trips are considered under 4 miles"""
     short_trip_cutoff = 4 * 1.609  # converts 4 miles into km, below this value is defined as a short trip
@@ -246,10 +273,22 @@ def trip_length_band(inputs, reserve_journey):
     return short_trip
 
 
+def mpg_traffic_shift(inputs, reserve_journey):
+    """Assigns a shifted fuel efficiency to an ICE completing the journey specified based on traffic conditions."""
+    journey_vel = avg_journey_vel(inputs, reserve_journey)
+    if journey_vel <= 60:
+        mpg_traffic_effect = (1-((60-journey_vel) * 0.0085))  # quantifies reduction in effective mpg below 60km/h
+    elif journey_vel >= 70:
+        mpg_traffic_effect = (1-((journey_vel-70) * 0.00031))  # quantifies reduction in effective mpg above 70km/h
+    else:
+        mpg_traffic_effect = 1   # assumes EV optimal operating range is between 60-70km/h
+    return mpg_traffic_effect
+
+
 def mpg_temp_shift(inputs, reserve_journey):
-    """Assigns a shifted fuel efficiency to an ICE completing the journey specified. Short trips in colder ambient
-    temperatures have a greater fuel efficiency reduction due to the percentage time of the journey required to heat up
-    the engine to optimal operating temperature"""
+    """Assigns a shifted fuel efficiency to an ICE completing the journey specified based on external ambient
+    temperature. Short trips in colder ambient temperatures have a greater fuel efficiency reduction due to the
+    percentage time of the journey required to heat up the engine to optimal operating temperature"""
     plug_out_time = plug_out(inputs, reserve_journey)
     td = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
     mpg_temperature = td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 0]
@@ -267,7 +306,8 @@ def mpg_ice(inputs, reserve_journey):
     """Calculates a shifted fuel efficiency based on the calculated effects of individual journey characteristics"""
     initial_mpg = inputs['MPG']
     temp_effect_mpg = mpg_temp_shift(inputs, reserve_journey)
-    shifted_mpg = initial_mpg * temp_effect_mpg
+    traffic_effect_mpg = mpg_traffic_shift(inputs, reserve_journey)
+    shifted_mpg = initial_mpg * temp_effect_mpg * inputs['Driving Style'] * traffic_effect_mpg
     return shifted_mpg
 
 
@@ -277,7 +317,7 @@ The following functions are developed to evaluate the cost of individual journey
     Financial Cost (£)          ---   
     Carbon Cost (Kg Co2)        ---  
     
-Data on petrol costs throughout the year is sourced from https://www.gov.uk/government/statistics/weekly-road-fuel-prices
+Petrol cost data throughout is sourced from         --- https://www.gov.uk/government/statistics/weekly-road-fuel-prices
 """
 
 
