@@ -137,7 +137,7 @@ def journey_time_traffic(inputs, reserve_journey):
 
 """
 The following functions are only to be used to calculate route optimistic travel times- they are not called by the 
-charge controller and are specific to the traffic condition simulation under the journey module used in the caclulation 
+charge controller and are specific to the traffic condition simulation under the journey module used in the calculation 
 in the shifted charge and mpg values for EVs and ICEs respectively 
 """
 
