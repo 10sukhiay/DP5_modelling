@@ -349,8 +349,8 @@ def petrol_cost(inputs, reserve_journey):
     petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2019_data_petrol_price.xlsx', parse_dates=[0],
                                       index_col=0)
     p_per_litre = petrol_price_data[
-                  plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta(days=7)].copy().iloc[
-        0, 1]
+                  plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta(days=7)
+                  ].copy().iloc[0, 1]
     mpg = mpg_ice(inputs, reserve_journey)
     l_per_km = (2.35215 / mpg)  # in litres per km
     petrol_consump_rate = l_per_km
