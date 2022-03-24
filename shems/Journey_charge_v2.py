@@ -6,12 +6,13 @@ Yazad Sukhia
 Feb 2022
 """
 
-
 import time
 import pandas as pd
 import Inputs_Journey_v2 as inp
 import API_tests as API
 import os
+
+
 # test change
 # import matplotlib as plt
 
@@ -92,10 +93,12 @@ def heating(inputs, reserve_journey):
     plug_out_time = plug_out(inputs, reserve_journey)
     td = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
     heat = td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 1]
+
     if heat == "ON":
         heat_effect = 0.85
     else:
         heat_effect = 1
+
     return heat_effect
 
 
@@ -107,10 +110,12 @@ def cooling(inputs, reserve_journey):
     plug_out_time = plug_out(inputs, reserve_journey)
     td = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
     cool = td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 2]
+
     if cool == "ON":
         cool_effect = 0.83
     else:
         cool_effect = 1
+
     return cool_effect
 
 
@@ -119,8 +124,10 @@ def rain(inputs, reserve_journey):
     to find precipitation level at the time of journey. Severity is classified in banded groups ranging from NONE,
     LIGHT, MILD, HEAVY"""
     plug_out_time = plug_out(inputs, reserve_journey)
-    precipdata = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Precipitation_data_uk_2019.xlsx', parse_dates=[0], index_col=0)
-    rain_effect = precipdata[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 day')].copy().iloc[0, 1]
+    precipdata = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Precipitation_data_uk_2019.xlsx', parse_dates=[0],
+                               index_col=0)
+    rain_effect = precipdata[
+            plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 day')].copy().iloc[0, 1]
     return rain_effect
 
 
@@ -129,25 +136,30 @@ def temp(inputs, reserve_journey):
     plug_out_time to find temperature level at the time of journey"""
     plug_out_time = plug_out(inputs, reserve_journey)
     td = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
-    temperature = td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 0]
+    temperature = \
+        td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 0]
     # temp = TempData[plug_out_time:plug_out_time + pd.Timedelta('1 h')].copy().iloc[0, 0]
     # temp = inputs['Temperature']
+
     if temperature < 23:
-        temp_effect = (1-((23-temperature) * 0.0033))
+        temp_effect = (1 - ((23 - temperature) * 0.0033))
     else:
         temp_effect = 1
+
     return temp_effect
 
 
 def range_traffic_shift(inputs, reserve_journey):
     """Assigns a shifted range value to an EV completing the journey specified based on traffic conditions."""
     journey_vel = avg_journey_vel(inputs, reserve_journey)
+
     if journey_vel <= 50:
-        traffic_effect = (1-((50-journey_vel) * 0.0023))  # quantifies reduction in effective range below 50km/h
+        traffic_effect = (1 - ((50 - journey_vel) * 0.0023))  # quantifies reduction in effective range below 50km/h
     elif journey_vel >= 80:
-        traffic_effect = (1-((journey_vel-80) * 0.000415))  # quantifies reduction in effective range above 80 km/h
+        traffic_effect = (1 - ((journey_vel - 80) * 0.000415))  # quantifies reduction in effective range above 80 km/h
     else:
         traffic_effect = 1  # assumes EV optimal operating range is between 50-80km/h
+
     return traffic_effect
 
 
@@ -188,7 +200,7 @@ def shift_charge(inputs, reserve_journey):
     # print(inp.cooling[0])
     # print(inp.style[0])
     # print(inp.regen[1])
-    apply_r_shift = (1/range_shift)
+    apply_r_shift = (1 / range_shift)
     init_charge_req = init_charge(inputs, reserve_journey)
     shift_charge_req = init_charge_req * apply_r_shift
     return shift_charge_req
@@ -199,12 +211,14 @@ def charge_add(inputs):
     delta_h = inputs['Distance up'] - inputs['Distance down']  # This can be read from the input excel file eventually
     capacity = inputs['Battery Capacity']
     mass = inputs['Vehicle Mass']
+
     if delta_h > 0:
         energy_j = delta_h * mass * 9.81
         energy_kwh = energy_j / 3600000
         add_charge = ((energy_kwh / capacity) * 100)
     else:
         add_charge = 0
+
     return add_charge
 
 
@@ -237,7 +251,8 @@ def results_journey(inputs, reserve_journey):
     final_charge_kwh = round((final_charge_percent / 100) * inputs['Battery Capacity'], 2)
     print("This is equivalent to", final_charge_kwh, "kWh")
     charge_time = round(final_charge_kwh / inputs['Charge Rate'], 2)
-    print("Therefore", charge_time, "hours are needed to charge to requirement using a", inputs['Charge Rate'], "kW charger")
+    print("Therefore", charge_time, "hours are needed to charge to requirement using a", inputs['Charge Rate'],
+          "kW charger")
     pounds_saved = journey_savings(inputs, reserve_journey)
     print('£', pounds_saved, 'on this journey saved with this EV selection')
     return
@@ -266,22 +281,26 @@ def trip_length_band(inputs, reserve_journey):
     """Defines if the trip considered is a 'short' or 'long' trip; short trips are considered under 4 miles"""
     short_trip_cutoff = 4 * 1.609  # converts 4 miles into km, below this value is defined as a short trip
     distance_km = API.journey_distance(inputs, reserve_journey)
+
     if distance_km <= short_trip_cutoff:
         short_trip = 'True'
     else:
         short_trip = 'False'
+
     return short_trip
 
 
 def mpg_traffic_shift(inputs, reserve_journey):
     """Assigns a shifted fuel efficiency to an ICE completing the journey specified based on traffic conditions."""
     journey_vel = avg_journey_vel(inputs, reserve_journey)
+
     if journey_vel <= 60:
-        mpg_traffic_effect = (1-((60-journey_vel) * 0.0085))  # quantifies reduction in effective mpg below 60km/h
+        mpg_traffic_effect = (1 - ((60 - journey_vel) * 0.0085))  # quantifies reduction in effective mpg below 60km/h
     elif journey_vel >= 70:
-        mpg_traffic_effect = (1-((journey_vel-70) * 0.00031))  # quantifies reduction in effective mpg above 70km/h
+        mpg_traffic_effect = (1 - ((journey_vel - 70) * 0.00031))  # quantifies reduction in effective mpg above 70km/h
     else:
-        mpg_traffic_effect = 1   # assumes EV optimal operating range is between 60-70km/h
+        mpg_traffic_effect = 1  # assumes EV optimal operating range is between 60-70km/h
+
     return mpg_traffic_effect
 
 
@@ -291,14 +310,17 @@ def mpg_temp_shift(inputs, reserve_journey):
     percentage time of the journey required to heat up the engine to optimal operating temperature"""
     plug_out_time = plug_out(inputs, reserve_journey)
     td = pd.read_excel(os.getcwd()[:-5] + 'Inputs/HomeGen/Temp1.xls', parse_dates=[0], index_col=0)
-    mpg_temperature = td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 0]
+    mpg_temperature = \
+        td[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta('1 h')].copy().iloc[0, 0]
     # mpg_temp = TempData[plug_out_time:plug_out_time + pd.Timedelta('1 h')].copy().iloc[0, 0]
     # mpg_temp = inputs['Temperature']
     short_trips = trip_length_band(inputs, reserve_journey)
+
     if short_trips == 'False':
-        mpg_temp_effect = (1-((21.1-mpg_temperature) * 0.0045))
+        mpg_temp_effect = (1 - ((21.1 - mpg_temperature) * 0.0045))
     else:
-        mpg_temp_effect = (1-((21.1-mpg_temperature) * 0.0072))
+        mpg_temp_effect = (1 - ((21.1 - mpg_temperature) * 0.0072))
+
     return mpg_temp_effect
 
 
@@ -324,12 +346,15 @@ Petrol cost data throughout is sourced from         --- https://www.gov.uk/gover
 def petrol_cost(inputs, reserve_journey):
     """Determines what the cost of fuel would be for the duration of the specified journey assuming an ICE is used"""
     plug_out_time = plug_out(inputs, reserve_journey)
-    petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2019_data_petrol_price.xlsx', parse_dates=[0], index_col=0)
-    p_per_litre = petrol_price_data[plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta(days=7)].copy().iloc[0, 1]
+    petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2019_data_petrol_price.xlsx', parse_dates=[0],
+                                      index_col=0)
+    p_per_litre = petrol_price_data[
+                  plug_out_time.replace(year=2019):plug_out_time.replace(year=2019) + pd.Timedelta(days=7)].copy().iloc[
+        0, 1]
     mpg = mpg_ice(inputs, reserve_journey)
     l_per_km = (2.35215 / mpg)  # in litres per km
     petrol_consump_rate = l_per_km
-    petrol_costs = p_per_litre     # CAN USE inputs['p per litre'] INSTEAD FROM INPUT FILE
+    petrol_costs = p_per_litre  # CAN USE inputs['p per litre'] INSTEAD FROM INPUT FILE
     petrol_p_per_km = petrol_consump_rate * petrol_costs
     journey_petrol_price = API.journey_distance(inputs, reserve_journey) * petrol_p_per_km
     return journey_petrol_price
@@ -357,12 +382,14 @@ def journey_cost(inputs, reserve_journey):
     l_per_km = (2.35215 / mpg)
     petrol_consump_rate = l_per_km
     elec_cost = inp.kwh_cost
+
     if vehicle_select == 1 or vehicle_select == 2:
         final_charge_kwh = final_kwh(inputs, reserve_journey)
         journey_price = final_charge_kwh * elec_cost
     elif vehicle_select == 3:
         petrol_p_per_km = petrol_consump_rate * petrol_costs
         journey_price = API.journey_distance(inputs, reserve_journey) * petrol_p_per_km
+
     return journey_price
 
 
@@ -370,7 +397,9 @@ def journey_savings(inputs, reserve_journey):
     """Based on the vehicle selected, will calculate a potential cost saving between the selection and an ICE. In the
     case of an ICE being selected for the journey, savings will return £0."""
     trip_cost = journey_cost(inputs, reserve_journey)
+    print('In an EV, this trip costs £', (round((trip_cost / 100), 2)))
     journey_petrol_price = petrol_cost(inputs, reserve_journey)
+    print('In an ICE, this trip costs £', (round((journey_petrol_price / 100), 2)))
     trip_savings = round(((journey_petrol_price - trip_cost) / 100), 2)
     return trip_savings
 
