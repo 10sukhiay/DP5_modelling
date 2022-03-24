@@ -16,15 +16,13 @@ def main(arrival_time, departure_time, time_resolution, inputs):
     No_of_Panels = round((Area_of_Roof-((2*Roof_Height*Space_From_Edge)+(2*Roof_Length*Space_From_Edge)))/Solar_Panel_Area)
     Panel_Area = No_of_Panels*Solar_Panel_Area
 
-    # arrival_time = pd.to_datetime('2019-02-25 19:00:00')
-    # departure_time = pd.to_datetime('2019-02-26 19:00:00')
-    # time_resolution = pd.Timedelta('20 min')
     hour_resolution = pd.Timedelta('60 min')
     hour_ratio = hour_resolution / time_resolution
 
-    IrradianceData1 = pd.read_csv(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristol3.csv')
+    IrradianceData1 = pd.read_csv(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristol4.csv')
     IrradianceData1['Datetime'] = pd.to_datetime(IrradianceData1['Datetime'])
-    IrradianceData1 = IrradianceData1.set_index("Datetime").resample(time_resolution).interpolate()
+    IrradianceData1 = IrradianceData1.set_index("Datetime").resample(time_resolution)
+    IrradianceData1 = IrradianceData1.interpolate()
     MaskedIrradiance = IrradianceData1[arrival_time: departure_time].copy()
 
     Temperature = pd.read_csv(os.getcwd()[:-5] + 'Inputs/HomeGen/Bristoltemp.csv')

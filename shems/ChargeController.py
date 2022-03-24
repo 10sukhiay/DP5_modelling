@@ -431,7 +431,9 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
             connection_extract['Heating_Power'] = Heat.mainElec(plug_in_time.replace(year=2019),
                                                                 plug_out_time.replace(year=2019), time_resolution,
                                                                 inputs).values  # Heat.mainElec(plug_out_time.replace(year=2019), plug_out_time.replace(year=2019), time_resolution, inputs)
-            connection_extract['Home_Power'] = connection_extract['Appliance_Power']  # - connection_extract['Solar_Power']
+
+            connection_extract['Home_Power'] = connection_extract['Appliance_Power']
+            #connection_extract['Appliance_Power'] = 0 # - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_price
             gas_carbon = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_c_intenisty
             total_gas_cost = gas_cost.cumsum()[-1]
@@ -460,7 +462,6 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
         connection_extract['Home_Power'] = connection_extract['Price'] * 0  # BODGE
         total_gas_cost = 0
         total_gas_carbon = 0
-
 
     return connection_extract, total_gas_cost, total_gas_carbon
 
