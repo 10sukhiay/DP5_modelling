@@ -47,10 +47,12 @@ def journey_destination(inputs, reserve_journey):
     definition as a reserve journey; TRUE or FALSE. The reserve journey is a set user input, a destination for which the
     charge controller always prioritises to charge to- an emergency destination such as the nearest hospital or the
     owners' child's school"""
+
     if reserve_journey:
         journey_end = inputs['Reserve Destination']
     else:
         journey_end = inputs['Journey Destination']
+
     return journey_end
 
 

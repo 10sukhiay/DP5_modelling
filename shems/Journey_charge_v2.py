@@ -19,6 +19,7 @@ import os
 
 def main():
     start_time = time.time()
+
     inputs = pd.read_excel('../Inputs/Yaz_Journey_API_inputs_data.xlsx').iloc[0, :]
     mpg_temp_shift(inputs, False)
     results_journey(inputs, False)
@@ -29,6 +30,7 @@ def main():
     traffic_time = API.journey_time_traffic
     print(traffic_time)
     # display_results()  # this is to be added after display_results() has been formed to graph results
+
     end_time = time.time()
     print('Completed in {:.4f} seconds'.format(end_time - start_time))
     return charge_time
@@ -270,10 +272,10 @@ def avg_journey_vel(inputs, reserve_journey):
     estimations (i.e considering the least amount of traffic as possible) and assumes that the vehicle is moving for a
     specified % of this time, as per the moving_ratio- the rest of the time is assumed to be stopped at lights/
     intersections"""
-    journey_dist_km = API.journey_distance(inputs, reserve_journey)
+    journey_dist_km = (API.journey_distance(inputs, reserve_journey) + 0.000001)  # BODGE to avoid /0 error
     journey_time_opt_hours = round((API.journey_time_optimist(inputs, reserve_journey) / 60), 2)
     moving_ratio = 0.95  # This should really be read from inputs file as is specific to each defined journey
-    journey_avg_vel = journey_dist_km / (journey_time_opt_hours * moving_ratio)
+    journey_avg_vel = journey_dist_km / ((journey_time_opt_hours * moving_ratio)+ 0.000001)  # BODGE to avoid /0 error
     return journey_avg_vel
 
 
@@ -344,7 +346,8 @@ Petrol cost data throughout is sourced from         --- https://www.gov.uk/gover
 
 
 def petrol_cost(inputs, reserve_journey):
-    """Determines what the cost of fuel would be for the duration of the specified journey assuming an ICE is used"""
+    """Determines what the cost of fuel would be for the duration of the specified journey assuming an ICE is used.
+    This is returned in pence."""
     plug_out_time = plug_out(inputs, reserve_journey)
     petrol_price_data = pd.read_excel(os.getcwd()[:-5] + 'Inputs/2019_data_petrol_price.xlsx', parse_dates=[0],
                                       index_col=0)
