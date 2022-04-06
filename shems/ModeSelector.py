@@ -27,7 +27,7 @@ def run_series():
 def run_multi():
     bigtic = time.time()
 
-    inputs_table = pd.read_excel('../Inputs/InputSchedule4.1.xlsx')
+    inputs_table = pd.read_excel('../Inputs/InputSchedule4.3.xlsx')
     # inputs_table = pd.read_csv('../Inputs/InputSchedule.csv')
     results = Parallel(n_jobs=10)(delayed(ChargeController.main)(inputs_table.loc[row, :], row) for row in range(inputs_table.shape[0]))
     flat_list = [item for sublist in results for item in sublist]  # yet another bodge

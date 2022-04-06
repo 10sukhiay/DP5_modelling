@@ -351,8 +351,8 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.subplot(513)
     plt.plot(charge_schedule_vrg['SoC'], label='vrg SoC')
     plt.plot(charge_schedule_v1g['SoC'], label='v1g SoC')
-    plt.plot(charge_schedule_v2g['SoC'], label='v2g SoC')
-    plt.plot(charge_schedule_v2h['SoC'], label='v2h SoC')
+    # plt.plot(charge_schedule_v2g['SoC'], label='v2g SoC')
+    # plt.plot(charge_schedule_v2h['SoC'], label='v2h SoC')
     plt.plot(charge_schedule_v2hg['SoC'], label='v2hg SoC')
     plt.grid()
     plt.legend()
@@ -360,21 +360,25 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     plt.subplot(514)
     plt.plot(charge_schedule_vrg['Running_Cost'], label='vrg Running_Cost')
     plt.plot(charge_schedule_v1g['Running_Cost'], label='v1g Running_Cost')
-    plt.plot(charge_schedule_v2g['Running_Cost'], label='v2g Running_Cost')
-    plt.plot(charge_schedule_v2h['Running_Cost'], label='v2h Running_Cost')
+    # plt.plot(charge_schedule_v2g['Running_Cost'], label='v2g Running_Cost')
+    plt.plot(charge_schedule_v2hg['Running_Cost'], label='v2hg Running_Cost')
+    # plt.plot(charge_schedule_v2h['Running_Cost'], label='v2h Running_Cost')
     plt.grid()
     plt.legend()
 
     plt.subplot(515)
     plt.plot(charge_schedule_vrg['Running_Carbon_Cost'], label='vrg Running_Carbon_Cost')
     plt.plot(charge_schedule_v1g['Running_Carbon_Cost'], label='v1g Running_Carbon_Cost')
-    plt.plot(charge_schedule_v2g['Running_Carbon_Cost'], label='v2g Running_Carbon_Cost')
-    plt.plot(charge_schedule_v2h['Running_Carbon_Cost'], label='v2h Running_Carbon_Cost')
+    # plt.plot(charge_schedule_v2g['Running_Carbon_Cost'], label='v2g Running_Carbon_Cost')
+    plt.plot(charge_schedule_v2hg['Running_Carbon_Cost'], label='v2hg Running_Carbon_Cost')
+    # plt.plot(charge_schedule_v2h['Running_Carbon_Cost'], label='v2h Running_Carbon_Cost')
     plt.grid()
     plt.legend()
 
+    # plt.show()
+
     # figManager = plt.get_current_fig_manager()
-    # # figManager.window.state('zoomed')
+    # figManager.window.state('zoomed')
     # figManager.frame.Maximize(True)
 
     # plt.autoscale()
@@ -383,7 +387,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
     fig.savefig('../Results/Figures/' + str(row + 2) + ' ' + str(case) + ', ' + descrp)
     fig.clf()
 
-    # plt.show()
+
 
 
 # def charge_duration
@@ -391,7 +395,7 @@ def plot_vr12g(charge_schedule_vrg, charge_schedule_v1g, charge_schedule_v2g, ch
 
 def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
-    carbon_intensity = pd.read_csv('../Inputs/' + 'CombinedCO2.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    carbon_intensity = pd.read_csv('../Inputs/' + carbon_intenisty, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     home_power_raw = pd.read_csv('../Inputs/' + 'MAC2000Std50HomePowerExcerpt.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
 
@@ -481,6 +485,7 @@ def main(inputs, row):
     global price_volatility_factor
     global tariff_imp_data
     global tariff_exp_data
+    global carbon_intenisty
     global plug_in_time
     global plug_out_time
     global time_resolution
@@ -511,6 +516,7 @@ def main(inputs, row):
     price_volatility_factor = inputs['Price Volatility']  # 1
     tariff_imp_data = inputs['Tariff Import Data']  # 'Inputs\AgileExtract.xls'
     tariff_exp_data = inputs['Tariff Export Data']  # 'Inputs\AgileExtract.xls'
+    carbon_intenisty = inputs['Carbon Intensity']
     plug_in_time = pd.to_datetime(inputs['Plug In Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
 
     time_resolution = pd.Timedelta(inputs['Time Resolution'])
@@ -587,11 +593,13 @@ def main(inputs, row):
     calculate_running_cost(vrg_charge_schedule_max)
     calculate_running_cost(v1g_charge_schedule)
     calculate_running_cost(v2g_charge_schedule)
+    calculate_running_cost(v2hg_charge_schedule)
     calculate_running_cost(v2h_charge_schedule)
 
     calculate_running_carbon(vrg_charge_schedule_max)
     calculate_running_carbon(v1g_charge_schedule)
     calculate_running_carbon(v2g_charge_schedule)
+    calculate_running_carbon(v2hg_charge_schedule)
     calculate_running_carbon(v2h_charge_schedule)
     toc = time.time()
 
@@ -600,14 +608,14 @@ def main(inputs, row):
     cost_results = [case, cost_of_change,
                     (test2year * vrg_charge_schedule_max['Running_Cost'].iloc[-1] + gas_cost)/100,
                     (test2year * v1g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
-                    (test2year * v2g_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
+                    (test2year * v2hg_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
                     (test2year * v2h_charge_schedule['Running_Cost'].iloc[-1] + gas_cost)/100,
                     (test2year * (vrg_charge_schedule_max['Running_Cost'].iloc[-1] - v2h_charge_schedule['Running_Cost'].iloc[-1]))/100]
 
     carbon_results = [case, carbon_of_change,
                     (test2year * vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
                     (test2year * v1g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
-                    (test2year * v2g_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
+                    (test2year * v2hg_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
                     (test2year * v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1] + gas_carbon)/1000,
                     (test2year * (vrg_charge_schedule_max['Running_Carbon_Cost'].iloc[-1] - v2h_charge_schedule['Running_Carbon_Cost'].iloc[-1]))/1000]
 
