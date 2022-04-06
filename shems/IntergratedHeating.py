@@ -261,7 +261,10 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
             if CoP > 5:
                 CoP = 5
             if CoP < 0:
-                CoP = 0   
+                CoP = 0
+
+            CoP = 2.5
+
             Heating = HeatPump_Power * CoP
             
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
