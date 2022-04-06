@@ -74,7 +74,7 @@ taken is calculated using a 'pessimistic' traffic model.
 
 def initialise_api_data(inputs, reserve_journey):
     """Function is called whenever the API is required, establishes link between the script and the google maps API"""
-    api_key = 'AIzaSyCsNLYOColvC8uLS7EeNMRi5nK1kr_KSp8'
+    api_key = 'AIzaSyDD2c4YtIVquuYyfgtw5Crc6H-_eqNqYb0'
     journey_start = journey_origin(inputs)
     journey_end = journey_destination(inputs, reserve_journey)
     departure_time = pd.to_datetime('2022-04-29 17:00:00')
