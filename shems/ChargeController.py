@@ -397,7 +397,7 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
     agile_extract = pd.read_csv('../Inputs/' + tariff_imp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     carbon_intensity = pd.read_csv('../Inputs/' + carbon_intenisty, parse_dates=[0], index_col=0).resample(time_resolution).pad()
     agile_extract_exp = pd.read_csv('../Inputs/' + tariff_exp_data, parse_dates=[0], index_col=0).resample(time_resolution).pad()
-    home_power_raw = pd.read_csv('../Inputs/' + 'MAC2000Std50HomePowerExcerpt.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
+    home_power_raw = pd.read_csv('../Inputs/' + 'LMEVHomePower.csv', parse_dates=[0], index_col=0).resample(time_resolution).pad()
 
     agile_extract.index = agile_extract.index.tz_localize(None)
     carbon_intensity.index = carbon_intensity.index.tz_localize(None)
@@ -442,9 +442,6 @@ def initialise_charge_schedule(appliance_forecast, heating_type, inputs):
             #connection_extract['Appliance_Power'] = 0 # - connection_extract['Solar_Power']
             gas_cost = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_price
             gas_carbon = connection_extract['Heating_Power'] / gas_efficiency * (time_resolution / pd.Timedelta('60 min')) * gas_c_intenisty
-            #Valid1 = gas_cost
-            #Valid2 = gas_cost.sum()
-            #Valid3 = gas_cost.cumsum()
             total_gas_cost = gas_cost.cumsum()[-1]
             total_gas_carbon = gas_carbon.cumsum()[-1]
         else:

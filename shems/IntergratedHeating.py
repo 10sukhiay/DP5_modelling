@@ -29,7 +29,7 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
     Inside_Temp = inputs['Inside Temp']
-    Inside_Temp_flow = Inside_Temp + 1
+    Temp_flow = Inside_Temp
     Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
@@ -54,10 +54,10 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
     FloorU = 0.22
     RoofU = inputs['Roof U']
     WindowU = 1
-    Window_Area = 1.2 * 2
+    Window_Area = 2
     No_Windows = 4
-    DoorU = 2
-    Door_Area = 2
+    DoorU = 1
+    Door_Area = 1
     No_Doors = 2
     SmallCorrection = 1
     ## Room heating ##
@@ -89,7 +89,7 @@ def mainElec(arrival_time, departure_time, time_resolution,inputs):
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Water
             
             if (Inside_Temp_Heating + Inside_Temp) > Desired_Temp:
-                Per_min_Energy = (Desired_Temp - Inside_Temp_flow) * Density_Air * Room_Volume * SHC_Water
+                Per_min_Energy = (Desired_Temp - Temp_flow) * Density_Air * Room_Volume * SHC_Water
                 Per_Second_change = Per_min_Energy / 60 / time_res
                 Heating = Energy_Loss + Per_Second_change
             else:
@@ -190,7 +190,7 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
     Wall_Height = 2.4;
     Wall_Length = inputs['Wall Length']
     Window_Area = 2;
-    No_Windows = inputs['No.Windows']
+    No_Windows = 4
     Door_Area = 2;
     No_Doors = inputs['No.Doors']    
     
@@ -207,7 +207,7 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0]
     Inside_Temp = inputs['Inside Temp']
-    Inside_Temp_flow = Inside_Temp + 1
+    Temp_flow = Inside_Temp
     Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
@@ -231,11 +231,11 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
     WallU = inputs['Wall U']
     FloorU = 0.22
     RoofU = inputs['Roof U']
-    WindowU = 1.8
-    Window_Area = 1.2 * 2
+    WindowU = 1
+    Window_Area = 2
     No_Windows = 4
-    DoorU = 3
-    Door_Area = 2
+    DoorU = 1
+    Door_Area = 1
     No_Doors = 2
     
     ## Room heating ##
@@ -257,13 +257,12 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
             test = 0
             
             HeatPump_Power = HeatPump_Rated       
-            CoP = 1 / (1 - (abs(Outside_Temp / Inside_Temp_flow)))
+            #CoP = 1 / (1 - (abs(Outside_Temp / Inside_Temp_flow)))
+            CoP = abs(Temp_flow / (Temp_flow - Outside_Temp))
             if CoP > 5:
                 CoP = 5
-            if CoP < 0:
-                CoP = 0
-
-            CoP = 2.5
+            if CoP < 1:
+                CoP = 1
 
             Heating = HeatPump_Power * CoP
             
@@ -279,7 +278,7 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
             
             if (Inside_Temp_Heating + Inside_Temp) > Desired_Temp:
-                Per_min_Energy = (Desired_Temp - Inside_Temp_flow) * Density_Air * Room_Volume * SHC_Air
+                Per_min_Energy = (Desired_Temp - Temp_flow) * Density_Air * Room_Volume * SHC_Air
                 Per_Second_change = Per_min_Energy / (60 * time_res)
                 Heating = Per_Second_change + Energy_Loss
                 HeatPump_Power = (Energy_Loss + Per_Second_change)/CoP
@@ -303,7 +302,7 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df1 = Power_df1.append({'Total Power': HeatPump_PowerTot  / 1000}, ignore_index=True)
+            Power_df1 = Power_df1.append({'Total Power': HeatPump_PowerTot/ 1000}, ignore_index=True)
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
             
@@ -321,16 +320,17 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss)
 
-            CoP = 1 / (1 - abs((Outside_Temp / Inside_Temp_flow)))
+            #CoP = 1 / (1 - abs((Outside_Temp / Inside_Temp_flow)))
+            CoP = abs(Temp_flow / (Temp_flow - Outside_Temp))
             if CoP > 5:
                 CoP = 5
-            if CoP < 0:
-                CoP = 0  
+            if CoP < 1:
+                CoP = 1
             Heating = HeatPump_Rated * CoP 
        
             Heating = Energy_Loss 
             HeatPump_Power = Energy_Loss / CoP  
-            if Outside_Temp > Inside_Temp_flow:
+            if Outside_Temp > Temp_flow:
                 HeatPump_Power = 0
             test = 1.14
             
@@ -344,23 +344,23 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
                 if HeatedWater > WaterCapacity:
                     HeatedWater = WaterCapacity
                     EnergyForWAter = WaterCapacity * SHC_Water * (ShowerTemp - Outside_Temp) / (60*time_res)
-                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + (EnergyForWAter/CoP)
                     test = 1.1
                 else:
                     EnergyForWAter = HeatPump_Rated - HeatPump_Power
-                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + (EnergyForWAter/CoP)
                     
                 TotalHeatedWater = TotalHeatedWater + HeatedWater   
             else:
                EnergyForWAter = 0
-               HeatPump_PowerTot = HeatPump_Power + EnergyForWAter                   
+               HeatPump_PowerTot = HeatPump_Power + (EnergyForWAter/CoP)
             
             if HeatPump_Power > HeatPump_Rated:
                 Heating = HeatPump_Rated * CoP
                 HeatPump_Power = HeatPump_Rated
                 test = 1.2
                 HeatedWater = 0
-                TotalHeatedWater = TotalHeatedWater + HeatedWater
+                TotalHeatedWater = TotalHeatedWater + EnergyForWAter
 
             Per_Second_change = Heating - Energy_Loss
             Per_min_Energy = Per_Second_change * 60 * time_res
@@ -374,7 +374,7 @@ def mainASHP(arrival_time, departure_time, time_resolution,inputs):
             Time = Time + time_res
             Time_Data.append(Time)
             Tempno = Tempno + 1
-            Power_df1 = Power_df1.append({'Total Power': HeatPump_PowerTot / 1000}, ignore_index=True)
+            Power_df1 = Power_df1.append({'Total Power': HeatPump_PowerTot/ 1000}, ignore_index=True)
         
             Inside_Temp = Inside_Temp + Inside_Temp_Heating
         
@@ -418,7 +418,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
 
     Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
     Inside_Temp = inputs['Inside Temp']
-    Inside_Temp_flow = Inside_Temp+1
+    Temp_flow = 11
     Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
@@ -442,13 +442,12 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     WallU = inputs['Wall U']
     FloorU = 0.22
     RoofU = inputs['Roof U']
-    WindowU = 1.8
-    Window_Area = 1.2 * 2
+    WindowU = 1
+    Window_Area = 2
     No_Windows = 4
-    DoorU = 3
-    Door_Area = 2
+    DoorU = 1
+    Door_Area = 1
     No_Doors = 2
-    
     ## Room heating ##
     HeatPump_Rated = inputs['Heatpump Rating']
     HeatPump_Power = HeatPump_Rated
@@ -468,11 +467,11 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
             test = 0
             
             HeatPump_Power = HeatPump_Rated       
-            CoP = 1 / (1 - (abs(Outside_Temp / Inside_Temp_flow)))
+            CoP = 1 / (1 - (abs(Outside_Temp / Temp_flow)))
             if CoP > 5:
                 CoP = 5
-            if CoP < 0:
-                CoP = 0   
+            if CoP < 1:
+                CoP = 1
             Heating = HeatPump_Power * CoP
             
             Wall_Loss = WallU * (Wall_Area * 4) * Outside_Temp_Change
@@ -487,7 +486,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
             Inside_Temp_Heating = (Per_min_Energy) / (Density_Air * Room_Volume) / SHC_Air
             
             if (Inside_Temp_Heating + Inside_Temp) > Desired_Temp:
-                Per_min_Energy = (Desired_Temp - Inside_Temp_flow) * Density_Air * Room_Volume * SHC_Air
+                Per_min_Energy = (Desired_Temp - Temp_flow) * Density_Air * Room_Volume * SHC_Air
                 Per_Second_change = Per_min_Energy / (60 * time_res)
                 Heating = Per_Second_change + Energy_Loss
                 HeatPump_Power = (Energy_Loss + Per_Second_change)/CoP
@@ -529,16 +528,16 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
             Door_Loss = DoorU * (Door_Area * No_Doors) * Outside_Temp_Change
             Energy_Loss = (Wall_Loss + Floor_Loss + Roof_Loss + Window_Loss + Door_Loss) * 1.1
 
-            CoP = 1 / (1 - (abs(Outside_Temp / Inside_Temp_flow)))
+            CoP = 1 / (1 - (abs(Outside_Temp / Temp_flow)))
             if CoP > 5:
                 CoP = 5
-            if CoP < 0:
-                CoP = 0  
+            if CoP < 1:
+                CoP = 1
             Heating = HeatPump_Rated * CoP 
        
             Heating = Energy_Loss 
             HeatPump_Power = Energy_Loss / CoP  
-            if Outside_Temp > Inside_Temp_flow:
+            if Outside_Temp > Temp_flow:
                 HeatPump_Power = 0
             test = 1.14
             
@@ -552,16 +551,16 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
                 if HeatedWater > WaterCapacity:
                     HeatedWater = WaterCapacity
                     EnergyForWAter = WaterCapacity * SHC_Water * (ShowerTemp - Outside_Temp) / (60*time_res)
-                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + (EnergyForWAter/CoP)
                     test = 1.1
                 else:
                     EnergyForWAter = HeatPump_Rated - HeatPump_Power
-                    HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                    HeatPump_PowerTot = HeatPump_Power + (EnergyForWAter/CoP)
                                 
-                TotalHeatedWater = TotalHeatedWater + HeatedWater   
+                TotalHeatedWater = TotalHeatedWater + (EnergyForWAter/CoP)
             else:
                 EnergyForWAter = 0
-                HeatPump_PowerTot = HeatPump_Power + EnergyForWAter
+                HeatPump_PowerTot = HeatPump_Power + (EnergyForWAter/CoP)
            
             if HeatPump_Power > HeatPump_Rated:
                 Heating = HeatPump_Rated * CoP
