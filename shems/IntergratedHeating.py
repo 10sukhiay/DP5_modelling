@@ -416,9 +416,9 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     OutsideTempData = OutsideTempData.set_index("Datetime").resample(time_resolution).interpolate()
     MaskedOutsideTemp = OutsideTempData[arrival_time: departure_time].copy()
 
-    Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
+    Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] - 1
     Inside_Temp = inputs['Inside Temp']
-    Temp_flow = 11
+    Temp_flow = 10
     Desired_Temp = inputs['Desired Temp']
     Outside_Temp_Change = Inside_Temp - Outside_Temp
     Time = 0
@@ -462,7 +462,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
     while Time < total_rows:
         if Inside_Temp < Desired_Temp:
             
-            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
+            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] - 1
             Outside_Temp_Change = Inside_Temp - Outside_Temp
             test = 0
             
@@ -516,7 +516,7 @@ def mainGSHP(arrival_time, departure_time, time_resolution,inputs):
             
         else:
 
-            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] + 1
+            Outside_Temp = MaskedOutsideTemp.iloc[Tempno, 0] - 1
             Outside_Temp_Change = Inside_Temp - Outside_Temp
             test = 1
             EnergyForWAter = 0
