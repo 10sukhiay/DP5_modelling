@@ -29,6 +29,8 @@ def main():
     print(distance_km)
     traffic_time = API.journey_time_traffic
     print(traffic_time)
+    carbon_kg = journey_carbon_cost(inputs, False) + journey_cost(inputs, True)
+    print(carbon_kg)
     # display_results()  # this is to be added after display_results() has been formed to graph results
 
     end_time = time.time()
