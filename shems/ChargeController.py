@@ -532,9 +532,9 @@ def main(inputs, row):
     response_false = API.initialise_api_data(inputs, False)
     opt_response_true = API.initialise_api_data_optimistic(inputs, True)
     opt_response_false = API.initialise_api_data_optimistic(inputs, False)
-    vrg_charge_duration = jcharge.time_charge(inputs, True, response_true, opt_response_true)
+    vrg_charge_duration = jcharge.time_charge(inputs, response_true, opt_response_true)
     print(vrg_charge_duration)
-    v1g_charge_duration = jcharge.time_charge(inputs, False, response_false, opt_response_false)
+    v1g_charge_duration = jcharge.time_charge(inputs, response_false, opt_response_false)
     # vrg_charge_duration = pd.Timedelta('30 min')  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     # v1g_charge_duration =  pd.Timedelta('90 min')  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     battery_mode = inputs['Battery Mode']  # EV or Home
@@ -558,8 +558,8 @@ def main(inputs, row):
 
         response = API.initialise_api_data(inputs, True)
 
-        petrol_cost = jcharge.petrol_cost(inputs, False, response_false, opt_response_false) + jcharge.petrol_cost(inputs, True, response_true, opt_response_true)
-        petrol_carbon = (jcharge.journey_carbon_cost(inputs, False, response_false, opt_response_false) + jcharge.journey_carbon_cost(inputs, True, response_true, opt_response_true))
+        petrol_cost = jcharge.petrol_cost(inputs, response_false, opt_response_false) + jcharge.petrol_cost(inputs, response_true, opt_response_true)
+        petrol_carbon = (jcharge.journey_carbon_cost(inputs, response_false, opt_response_false) + jcharge.journey_carbon_cost(inputs, response_true, opt_response_true))
         # petrol_cost = 100  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
 
         test2year = 52 / 12
@@ -586,7 +586,7 @@ def main(inputs, row):
         return output
 
     if battery_mode == 'EV':
-        plug_out_time = jcharge.plug_out(inputs, False, response_false)
+        plug_out_time = jcharge.plug_out(inputs, response_false)
         # plug_out_time = pd.to_datetime(inputs['Plug Out Time']) # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
