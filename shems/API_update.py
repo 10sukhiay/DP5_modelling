@@ -109,29 +109,29 @@ outputs
 """
 
 
-def journey_distance(inputs, reserve_journey):
+def journey_distance(inputs, reserve_journey, response):
     """"Uses the generated API response from the input journey to calculate and return the distance along the generated
      google maps driving route"""
-    response = initialise_api_data(inputs, reserve_journey)
+    # response = initialise_api_data(inputs, reserve_journey)
     distance_metres = response.json()["rows"][0]["elements"][0]["distance"]["value"]
     distance_km = round(distance_metres / 1000, 2)
     return distance_km
 
 
-def journey_time(inputs, reserve_journey):
+def journey_time(inputs, reserve_journey, response):
     """"Uses the generated API response from the input journey to calculate and return the time taken to travel along
     the generated google maps driving route discounting the inclusion of traffic along the route"""
-    response = initialise_api_data(inputs, reserve_journey)
+    # response = initialise_api_data(inputs, reserve_journey)
     time_seconds = response.json()["rows"][0]["elements"][0]["duration"]["value"]
     time_minutes = round(time_seconds / 60, 2)
     return time_minutes
 
 
-def journey_time_traffic(inputs, reserve_journey):
+def journey_time_traffic(inputs, reserve_journey, response):
     """"Uses the generated API response from the input journey to calculate and return the time taken to travel along
     the generated google maps driving route taking into consideration the inclusion of traffic along the route modelled
     either as optimistic, best_guess, or pessimistic as defined in the initialise_api_data function"""
-    response = initialise_api_data(inputs, reserve_journey)
+    # response = initialise_api_data(inputs, reserve_journey)
     traffic_time = pd.Timedelta(str(response.json()["rows"][0]["elements"][0]["duration_in_traffic"]["value"]) + 's')
     # traffic_time_minutes = round((traffic_time / 60), 2)
     return traffic_time
@@ -169,11 +169,11 @@ def initialise_api_data_optimistic(inputs, reserve_journey):  # Only to be used 
     return response
 
 
-def journey_time_optimist(inputs, reserve_journey):
+def journey_time_optimist(inputs, reserve_journey, opt_response):
     """"Uses the generated API response from the input journey to calculate and return the time taken to travel along
     the generated google maps driving route discounting the inclusion of traffic along the route"""
-    response = initialise_api_data_optimistic(inputs, reserve_journey)
-    time_seconds_opt = response.json()["rows"][0]["elements"][0]["duration"]["value"]
+    # opt_response = initialise_api_data_optimistic(inputs, reserve_journey)
+    time_seconds_opt = opt_response.json()["rows"][0]["elements"][0]["duration"]["value"]
     time_minutes_opt = round(time_seconds_opt / 60, 2)
     return time_minutes_opt
 

@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import ApplianceDemand
 import HomeGenerationCode as HomeGen
 import IntergratedHeating as Heat
-import Journey_charge_v2 as jcharge
+import Journey_charge_v3 as jcharge
+import API_update as API
 import time
 import API_tests
 import csv
@@ -524,11 +525,16 @@ def main(inputs, row):
     carbon_intenisty = inputs['Carbon Intensity']
     plug_in_time = pd.to_datetime(inputs['Plug In Time'])  # '2019-02-25 19:00:00' Bugged: '2019-07-23 19:00:00'
 
+
     time_resolution = pd.Timedelta(inputs['Time Resolution'])
     # vrg_charge_duration = pd.Timedelta('0 h')
-    vrg_charge_duration = jcharge.time_charge(inputs, True)
+    response_true = API.initialise_api_data(inputs, True)
+    response_false = API.initialise_api_data(inputs, False)
+    opt_response_true = API.initialise_api_data_optimistic(inputs, True)
+    opt_response_false = API.initialise_api_data_optimistic(inputs, False)
+    vrg_charge_duration = jcharge.time_charge(inputs, True, response_true, opt_response_true)
     print(vrg_charge_duration)
-    v1g_charge_duration = jcharge.time_charge(inputs, False)
+    v1g_charge_duration = jcharge.time_charge(inputs, False, response_false, opt_response_false)
     # vrg_charge_duration = pd.Timedelta('30 min')  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     # v1g_charge_duration =  pd.Timedelta('90 min')  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     battery_mode = inputs['Battery Mode']  # EV or Home
@@ -549,8 +555,11 @@ def main(inputs, row):
     tic = time.time()
 
     if battery_mode == 'ICE':  # WARNING not obvious but this short circuits the program. Makes all other inputs irrelevant
-        petrol_cost = jcharge.petrol_cost(inputs, False) + jcharge.petrol_cost(inputs, True)
-        petrol_carbon = (jcharge.journey_carbon_cost(inputs, False) + jcharge.journey_carbon_cost(inputs, True))*1000
+
+        response = API.initialise_api_data(inputs, True)
+
+        petrol_cost = jcharge.petrol_cost(inputs, False, response_false, opt_response_false) + jcharge.petrol_cost(inputs, True, response_true, opt_response_true)
+        petrol_carbon = (jcharge.journey_carbon_cost(inputs, False, response_false, opt_response_false) + jcharge.journey_carbon_cost(inputs, True, response_true, opt_response_true))
         # petrol_cost = 100  # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
 
         test2year = 52 / 12
@@ -563,10 +572,10 @@ def main(inputs, row):
                         0]
 
         carbon_results = [case, carbon_of_change,
-                          petrol_carbon,
-                          petrol_carbon,
-                          petrol_carbon,
-                          petrol_carbon,
+                          test2year * petrol_carbon,
+                          test2year * petrol_carbon,
+                          test2year * petrol_carbon,
+                          test2year * petrol_carbon,
                           0]
 
         output = [cost_results, carbon_results]
@@ -577,7 +586,7 @@ def main(inputs, row):
         return output
 
     if battery_mode == 'EV':
-        plug_out_time = jcharge.plug_out(inputs, False)
+        plug_out_time = jcharge.plug_out(inputs, False, response_false)
         # plug_out_time = pd.to_datetime(inputs['Plug Out Time']) # CCHHHHHHAAAANNNGGGGGEEEEEEEE LATER TO VALUES FROM ABOVE
     else:
         plug_out_time = pd.to_datetime(inputs['Plug Out Time'])
